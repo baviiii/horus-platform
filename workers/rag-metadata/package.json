@@ -1,0 +1,14 @@
+{
+  "name": "rag-metadata",
+  "version": "1.0.0",
+  "description": "RAG Metadata Function for Dashboard Intelligence",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {},
+  "engines": {
+    "node": "~20"
+  }
+}
+

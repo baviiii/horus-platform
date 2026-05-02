@@ -1,0 +1,14 @@
+node_modules
+.next
+.turbo
+dist
+build
+coverage
+pnpm-lock.yaml
+*.min.js
+*.min.css
+seed-corpus
+infrastructure/web-scraper/output
+infrastructure/web-scraper/node_modules
+workers/*/node_modules
+.vercel

@@ -1,0 +1,430 @@
+// Horus Platform — Production Prisma schema
+// Multi-tenant by default. Every domain table carries tenantId.
+// RLS policies are applied via migrations under prisma/migrations/.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions", "fullTextSearchPostgres"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  directUrl  = env("DIRECT_URL")
+  extensions = [pgcrypto, vector(map: "vector"), pg_trgm]
+}
+
+// =============================================================================
+// Tenancy
+// =============================================================================
+
+enum Plan {
+  FREE
+  STARTER
+  PRO
+  SCALE
+  ENTERPRISE
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Tenant {
+  id            String   @id @default(uuid()) @db.Uuid
+  slug          String   @unique
+  name          String
+  plan          Plan     @default(FREE)
+  config        Json     @default("{}")
+  customDomain  String?  @unique
+  domainVerifiedAt DateTime?
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  members        TenantMember[]
+  apiKeys        ApiKey[]
+  documents      Document[]
+  chunks         Chunk[]
+  entities       Entity[]
+  relationships  Relationship[]
+  chatSessions   ChatSession[]
+  prompts        Prompt[]
+  usageRecords   UsageRecord[]
+  auditLogs      AuditLog[]
+  alerts         Alert[]
+  webhooks       Webhook[]
+  enabledModules TenantModule[]
+
+  @@index([slug])
+  @@index([customDomain])
+  @@map("tenants")
+}
+
+model TenantMember {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  userId    String   @db.Uuid // matches Supabase auth.users.id
+  role      Role     @default(MEMBER)
+  invitedBy String?  @db.Uuid
+  joinedAt  DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, userId])
+  @@index([userId])
+  @@map("tenant_members")
+}
+
+model TenantModule {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  moduleKey String // careers, policy, generic, finance, legal...
+  config    Json     @default("{}")
+  enabledAt DateTime @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, moduleKey])
+  @@map("tenant_modules")
+}
+
+// =============================================================================
+// Auth: API Keys (for SDK consumers)
+// =============================================================================
+
+model ApiKey {
+  id          String    @id @default(uuid()) @db.Uuid
+  tenantId    String    @db.Uuid
+  keyHash     String    @unique // bcrypt hash
+  keyPrefix   String // public-displayable, e.g. "horus_sk_live_abc..."
+  name        String
+  scopes      String[]  @default([])
+  rateLimit   Int       @default(100) // requests per minute
+  lastUsedAt  DateTime?
+  expiresAt   DateTime?
+  revokedAt   DateTime?
+  createdById String    @db.Uuid
+  createdAt   DateTime  @default(now())
+
+  tenant       Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  usageRecords UsageRecord[]
+  auditLogs    AuditLog[]
+
+  @@index([tenantId])
+  @@index([keyHash])
+  @@index([keyPrefix])
+  @@map("api_keys")
+}
+
+// =============================================================================
+// Documents & Search
+// =============================================================================
+
+enum DocStatus {
+  PENDING
+  PROCESSING
+  INDEXED
+  FAILED
+  ARCHIVED
+}
+
+model Document {
+  id           String    @id @default(uuid()) @db.Uuid
+  tenantId     String    @db.Uuid
+  title        String
+  category     String?
+  tags         String[]  @default([])
+  blobUrl      String
+  blobBytes    BigInt?
+  mimeType     String?
+  status       DocStatus @default(PENDING)
+  pageCount    Int?
+  chunksCount  Int       @default(0)
+  searchIndex  String? // Azure AI Search index name
+  metadata     Json      @default("{}")
+  errorMessage String?
+  uploadedById String    @db.Uuid
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  indexedAt    DateTime?
+
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  chunks   Chunk[]
+  entities DocumentEntity[]
+
+  @@index([tenantId, status])
+  @@index([tenantId, category])
+  @@map("documents")
+}
+
+model Chunk {
+  id          String                       @id @default(uuid()) @db.Uuid
+  tenantId    String                       @db.Uuid
+  documentId  String                       @db.Uuid
+  ordinal     Int
+  text        String
+  searchId    String? // ID in Azure AI Search
+  embedding   Unsupported("vector(3072)")?
+  pageNumber  Int?
+  charStart   Int?
+  charEnd     Int?
+  metadata    Json                         @default("{}")
+  createdAt   DateTime                     @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, ordinal])
+  @@index([tenantId, documentId])
+  @@index([searchId])
+  @@map("chunks")
+}
+
+// =============================================================================
+// Knowledge Graph (mirror of Cosmos/Neo4j; canonical IDs live here)
+// =============================================================================
+
+model Entity {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  name        String
+  type        String // organization, program, policy, funding, skill, occupation, etc.
+  graphNodeId String? // Cosmos vertex / Neo4j node ID
+  aliases     String[] @default([])
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents  DocumentEntity[]
+  outgoing   Relationship[]   @relation("FromEntity")
+  incoming   Relationship[]   @relation("ToEntity")
+
+  @@unique([tenantId, type, name])
+  @@index([tenantId, type])
+  @@index([graphNodeId])
+  @@map("entities")
+}
+
+model Relationship {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @db.Uuid
+  fromEntityId String   @db.Uuid
+  toEntityId   String   @db.Uuid
+  type         String // funds, employs, requires, located_in, contradicts, supports...
+  confidence   Float    @default(1.0)
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromEntity Entity @relation("FromEntity", fields: [fromEntityId], references: [id], onDelete: Cascade)
+  toEntity   Entity @relation("ToEntity", fields: [toEntityId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, fromEntityId, toEntityId, type])
+  @@index([tenantId, type])
+  @@map("relationships")
+}
+
+model DocumentEntity {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  documentId String   @db.Uuid
+  entityId   String   @db.Uuid
+  mentions   Int      @default(1)
+  pages      Int[]    @default([])
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  entity   Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, entityId])
+  @@index([tenantId])
+  @@map("document_entities")
+}
+
+// =============================================================================
+// Chat / RAG sessions
+// =============================================================================
+
+enum MsgRole {
+  SYSTEM
+  USER
+  ASSISTANT
+  TOOL
+}
+
+model ChatSession {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String   @db.Uuid
+  userId    String?  @db.Uuid // null = SDK-only caller
+  apiKeyId  String?  @db.Uuid
+  context   String? // career-coaching, policy-research, etc.
+  title     String?
+  metadata  Json     @default("{}")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant   Tenant        @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  messages ChatMessage[]
+
+  @@index([tenantId, userId])
+  @@index([tenantId, createdAt])
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id         String   @id @default(uuid()) @db.Uuid
+  sessionId  String   @db.Uuid
+  role       MsgRole
+  content    String
+  sources    Json? // citations
+  toolCalls  Json?
+  tokensIn   Int?
+  tokensOut  Int?
+  latencyMs  Int?
+  modelUsed  String?
+  createdAt  DateTime @default(now())
+
+  session ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, createdAt])
+  @@map("chat_messages")
+}
+
+// =============================================================================
+// Prompts (per-tenant overrides + platform defaults)
+// =============================================================================
+
+model Prompt {
+  id        String   @id @default(uuid()) @db.Uuid
+  tenantId  String?  @db.Uuid // null = platform default
+  key       String // career-coach, policy-analyst, etc.
+  template  String
+  variables Json     @default("{}") // schema for template variables
+  version   Int      @default(1)
+  isActive  Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant Tenant? @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, key, version])
+  @@index([key, isActive])
+  @@map("prompts")
+}
+
+// =============================================================================
+// Usage / Billing
+// =============================================================================
+
+enum UsageMeter {
+  RAG_QUERIES
+  AGENTIC_QUERIES
+  GRAPH_QUERIES
+  EMBEDDINGS
+  DOCUMENTS_PROCESSED
+  COMPLETION_TOKENS_IN
+  COMPLETION_TOKENS_OUT
+  STORAGE_BYTES
+}
+
+model UsageRecord {
+  id         String     @id @default(uuid()) @db.Uuid
+  tenantId   String     @db.Uuid
+  apiKeyId   String?    @db.Uuid
+  meter      UsageMeter
+  quantity   BigInt
+  unitCost   Decimal?   @db.Decimal(12, 6)
+  metadata   Json       @default("{}")
+  occurredAt DateTime   @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  apiKey ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, meter, occurredAt])
+  @@index([tenantId, occurredAt])
+  @@map("usage_records")
+}
+
+// =============================================================================
+// Audit & Webhooks
+// =============================================================================
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  userId     String?  @db.Uuid
+  apiKeyId   String?  @db.Uuid
+  action     String
+  resource   String?
+  resourceId String?
+  metadata   Json     @default("{}")
+  ip         String?
+  userAgent  String?
+  occurredAt DateTime @default(now())
+
+  tenant Tenant  @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  apiKey ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+
+  @@index([tenantId, occurredAt])
+  @@index([tenantId, action])
+  @@map("audit_logs")
+}
+
+model Webhook {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @db.Uuid
+  url        String
+  events     String[]  @default([])
+  secret     String
+  isActive   Boolean   @default(true)
+  lastFiredAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@map("webhooks")
+}
+
+// =============================================================================
+// Alerts (proactive intelligence notifications)
+// =============================================================================
+
+enum AlertSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AlertStatus {
+  OPEN
+  ACKNOWLEDGED
+  RESOLVED
+  DISMISSED
+}
+
+model Alert {
+  id          String        @id @default(uuid()) @db.Uuid
+  tenantId    String        @db.Uuid
+  kind        String // anomaly, contradiction, threshold, new_document, etc.
+  severity    AlertSeverity @default(MEDIUM)
+  status      AlertStatus   @default(OPEN)
+  title       String
+  description String
+  context     Json          @default("{}")
+  resolvedAt  DateTime?
+  createdAt   DateTime      @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status, createdAt])
+  @@map("alerts")
+}

@@ -1,0 +1,20 @@
+#cloud-config
+package_update: true
+package_upgrade: true
+
+packages:
+  - openjdk-17-jdk
+  - wget
+  - curl
+
+runcmd:
+  - wget -O - https://debian.neo4j.com/neotechnology.gpg.key | apt-key add -
+  - echo 'deb https://debian.neo4j.com stable latest' > /etc/apt/sources.list.d/neo4j.list
+  - apt-get update
+  - apt-get install -y neo4j
+  - neo4j-admin dbms set-initial-password 'CareerCraft2026!'
+  - sed -i 's/#server.default_listen_address=0.0.0.0/server.default_listen_address=0.0.0.0/' /etc/neo4j/neo4j.conf
+  - echo "server.memory.heap.initial_size=2g" >> /etc/neo4j/neo4j.conf
+  - echo "server.memory.heap.max_size=2g" >> /etc/neo4j/neo4j.conf
+  - systemctl enable neo4j
+  - systemctl start neo4j

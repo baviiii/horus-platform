@@ -1,0 +1,16 @@
+{
+  "name": "local-web-scraper",
+  "version": "1.0.0",
+  "description": "Local-only SA Government web scraper - no cloud dependencies",
+  "main": "local-scraper.js",
+  "scripts": {
+    "scrape": "node --max-old-space-size=4096 local-scraper.js",
+    "scrape:jobs": "node --max-old-space-size=4096 local-scraper.js --jobsOnly",
+    "scrape:skills": "node --max-old-space-size=4096 local-scraper.js --skillsOnly",
+    "scrape:news": "node --max-old-space-size=4096 local-scraper.js --newsOnly",
+    "install-browsers": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  }
+}

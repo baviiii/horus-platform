@@ -1,0 +1,36 @@
+#	Title	Type	Source / URL	Category	Region	Notes / Use
+1	Career Education & Pathways Strategy	PDF	education.sa.gov.au	Career Guidance / Policy	SA	Foundational career guidance
+2	Jobs & Skills Outlook 2024	PDF	skills.sa.gov.au	Industry / Workforce Insights	SA	Skills demand & projections
+3	Interview Preparation Guide	PDF	dcceew.gov.au	Interview Prep	AU	National interview strategies
+4	Job Search Basics Workbook	PDF	jobjumpstart.gov.au	Job Search / Career	AU	Practical job seeker guide
+5	SA Adult & Community Education Implementation Plan	PDF	ffr.gov.au	Training / Skills	SA	Workforce development
+6	Regional Jobs Support & Incentive Program	PDF	business.sa.gov.au	Funding / Programs	SA	Regional job incentives
+7	Our Strategy for Public Education	PDF	SA Gov	Education / Policy	SA	Check publication year; historical if old
+8	20-Year Infrastructure Plan for Public Education and Care	PDF	SA Gov	Education / Policy	SA	Mostly historical; long-term infrastructure plan
+9	Aboriginal Education Strategy	PDF	SA Gov	Education / Inclusion	SA	Focus on indigenous education pathways
+10	Civics and Citizenship Reforms	PDF	SA Gov	Education / Policy	SA	Curriculum / student engagement
+11	Country Education Strategy	PDF	SA Gov	Education / Regional	SA	Rural / regional education
+12	Digital Strategy Overview	PDF	SA Gov	Education / Tech	SA	Digital learning initiatives
+13	Disability Access and Inclusion	PDF	SA Gov	Inclusion / Accessibility	SA	Policy + programs
+14	Early Learning Strategy	PDF	SA Gov	Education / Early Learning	SA	Preschool / early childhood guidance
+15	Music Education Strategy	PDF	SA Gov	Education / Arts	SA	Curriculum + skills
+16	Purpose Statement for Public Education	PDF	SA Gov	Policy	SA	Strategic overview
+17	Reconciliation Action Plan	PDF	SA Gov	Inclusion / Cultural	SA	Indigenous engagement initiatives
+18	Review of the Construction Industry Training Fund Act 1993	PDF	SA Gov	Training / Funding	SA	Historical; regulatory review
+19	Specialist Teacher Workforce Plan	PDF	SA Gov	Workforce / Career	SA	Teacher workforce development
+20	Suicide Prevention Action Plan	PDF	SA Gov	Wellbeing / Policy	SA	Student safety & wellbeing
+21	Supporting Inclusion and Student Engagement	PDF	SA Gov	Inclusion / Education	SA	Programs for marginalized groups
+22	TAFE SA Roadmap for the Future	PDF	TAFE SA	Training / Career	SA	Vocational pathways
+23	Workforce Strategy	PDF	SA Gov	Workforce / Career	SA	Workforce planning and demand
+24	SA Government – Assistance & Support for Looking for Work	Web	sa.gov.au	Career / Interview / Training	SA	Scrape: live programs, tips, immigrant support
+25	SA Government – Finding a Job	Web	sa.gov.au	Career / Job Search	SA	Scrape: job-hunting guidance
+26	SA Government – Career Information	Web	sa.gov.au	Career / Pathways	SA	Scrape: pathways, training, migrant recognition
+27	Career Transition Service / Jobs and Skills Hub	Web	statedevelopment.sa.gov.au	Career / Regional / Training	SA	Scrape: regional career support, training
+28	Skilled Migrant Job Support Programs	Web	migration.sa.gov.au	Career / Migrants	SA	Scrape: resume, interview, networking support
+29	Training & Subsidised Education Support	Web	skilledworkers.business.sa.gov.au	Training / Funding	SA	Scrape: eligibility, programs, fee-free TAFE
+30	Support to Get You Job‑Ready (Federal)	Web	dewr.gov.au	Training / Skills / Career	AU	Scrape: national job readiness programs
+31	I Work for SA – Public Sector Careers	Web	publicsector.sa.gov.au	Career / Interview / Training	SA	Scrape guidance, application process, selection criteria, resume & interview tips
+32	SA Health Careers	Web	sahealth.sa.gov.au/careers	Career / Pathways	SA	Scrape role descriptions, pathways, recruitment tips
+33	Shared Services SA Careers	Web	npe.sharedservices.sa.gov.au/careers	Career / Interview	SA	Scrape selection criteria, resume guidance, interview prep
+34	JobActive & Local Employment Services	Web	jobactive.gov.au	Training / Career	AU	National programs, training, and job readiness guidance
+

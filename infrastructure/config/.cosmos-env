@@ -1,0 +1,5 @@
+﻿# Cosmos DB Connection (generated 2026-01-06 18:54)
+COSMOS_GREMLIN_ENDPOINT=wss://careercraft-graph.gremlin.cosmos.azure.com:443/
+COSMOS_PRIMARY_KEY=WjkL2O9EVHNZ2ub4HikbMHPBulzZFJcTB4geacpHeGwTV8zKr97yr8jpf2XhcX1mBWOiqXNfnaHWACDb9Eir4Q==
+COSMOS_DATABASE=graphdb
+COSMOS_GRAPH=career-graph

@@ -1,0 +1,23 @@
+{
+  "name": "enterprise-web-scraper",
+  "version": "1.0.0",
+  "description": "Enterprise-grade web scraper for SA Government websites using Playwright",
+  "main": "scraper.js",
+  "scripts": {
+    "scrape": "node --max-old-space-size=6144 scraper.js",
+    "install-browsers": "npx playwright install chromium"
+  },
+  "keywords": [
+    "scraper",
+    "playwright",
+    "azure",
+    "web-scraping"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "playwright": "^1.40.0",
+    "dotenv": "^16.3.1"
+  }
+}
+

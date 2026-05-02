@@ -1,0 +1,51 @@
+{
+  "name": "horus-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Horus Intelligence Platform — multi-tenant B2B intelligence as a service.",
+  "packageManager": "pnpm@9.12.3",
+  "engines": {
+    "node": ">=20.11.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "turbo run dev --parallel",
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:e2e": "turbo run test:e2e",
+    "clean": "turbo run clean && rm -rf node_modules .turbo",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\" --ignore-path .gitignore",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yaml,yml}\" --ignore-path .gitignore",
+    "db:generate": "pnpm --filter @horus/db prisma generate",
+    "db:migrate": "pnpm --filter @horus/db prisma migrate dev",
+    "db:migrate:deploy": "pnpm --filter @horus/db prisma migrate deploy",
+    "db:push": "pnpm --filter @horus/db prisma db push",
+    "db:studio": "pnpm --filter @horus/db prisma studio",
+    "db:seed": "pnpm --filter @horus/db tsx prisma/seed.ts",
+    "sdk:build": "pnpm --filter @horus/sdk build",
+    "sdk:publish": "pnpm --filter @horus/sdk publish --access restricted",
+    "web:dev": "pnpm --filter @horus/web dev",
+    "web:build": "pnpm --filter @horus/web build",
+    "prepare": "husky || true"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3",
+    "prettier-plugin-tailwindcss": "^0.6.8",
+    "tsx": "^4.19.2",
+    "turbo": "^2.3.0",
+    "typescript": "^5.6.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx}": [
+      "prettier --write"
+    ],
+    "*.{json,md,yaml,yml}": [
+      "prettier --write"
+    ]
+  }
+}

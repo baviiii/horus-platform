@@ -1,0 +1,19 @@
+{
+  "name": "careercraft-azure-functions",
+  "version": "1.0.0",
+  "description": "Azure Functions for CareerCraft agentic RAG system",
+  "scripts": {
+    "start": "func start",
+    "test": "echo \"No tests yet\""
+  },
+  "dependencies": {
+    "@azure/data-tables": "^13.3.2",
+    "@azure/storage-blob": "^12.17.0",
+    "gremlin": "^3.8.0",
+    "neo4j-driver": "^5.15.0",
+    "pdfjs-dist": "^4.0.189"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

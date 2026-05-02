@@ -1,0 +1,34 @@
+{
+  "name": "@horus/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./rag": "./src/rag/index.ts",
+    "./agentic": "./src/reasoning/index.ts",
+    "./graph": "./src/graph/index.ts",
+    "./documents": "./src/documents/index.ts",
+    "./entities": "./src/entities/index.ts",
+    "./alerts": "./src/alerts/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist .turbo",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@horus/db": "workspace:*",
+    "@azure/search-documents": "^12.1.0",
+    "@azure/storage-blob": "^12.26.0",
+    "openai": "^4.73.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "typescript": "^5.6.3"
+  }
+}
