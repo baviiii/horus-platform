@@ -4,21 +4,38 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/cn';
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  [
+    'group relative inline-flex items-center justify-center gap-2 whitespace-nowrap',
+    'font-medium tracking-[-0.005em]',
+    'rounded-full transition-[background,color,box-shadow,transform] duration-200 ease-out',
+    'focus-visible:ring-accent focus-visible:ring-offset-paper focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2',
+    'disabled:pointer-events-none disabled:opacity-50',
+  ],
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
-        destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90',
-        outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground',
-        secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
-        link: 'text-primary underline-offset-4 hover:underline',
+        // Primary — solid ink, the Apple "buy now" affordance
+        default: 'bg-ink text-paper hover:bg-ink-soft shadow-sm active:scale-[0.98]',
+        // Accent — Horus blue, used sparingly
+        accent: 'bg-accent hover:bg-accent-bright text-white shadow-sm active:scale-[0.98]',
+        // Outline — hairline pill
+        outline:
+          'border-hairline-strong bg-paper text-ink hover:border-ink/40 hover:bg-paper-soft border active:scale-[0.98]',
+        // Ghost — used in nav
+        ghost: 'text-ink-soft hover:text-ink hover:bg-paper-soft',
+        // Subtle — light fill
+        subtle: 'bg-paper-soft text-ink hover:bg-paper-deep active:scale-[0.98]',
+        // Link — Apple-style underlined chevron link
+        link: 'text-accent rounded-none px-0 decoration-1 underline-offset-4 hover:underline',
+        destructive: 'bg-destructive text-destructive-foreground hover:opacity-90',
+        secondary:
+          'bg-paper-soft text-ink border-hairline hover:bg-paper-deep border active:scale-[0.98]',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 rounded-md px-3',
-        lg: 'h-11 rounded-md px-8',
+        sm: 'h-8 px-4 text-[13px]',
+        default: 'h-10 px-5 text-sm',
+        lg: 'h-12 px-7 text-[15px]',
+        xl: 'h-14 px-8 text-base',
         icon: 'h-10 w-10',
       },
     },
@@ -27,16 +44,17 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
+  extends React.ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }
 
 export const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  ({ className, variant, size, asChild = false, children, ...props }, ref) => {
     const Comp = asChild ? Slot : 'button';
     return (
-      <Comp className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props} />
+      <Comp className={cn(buttonVariants({ variant, size }), className)} ref={ref} {...props}>
+        {children}
+      </Comp>
     );
   },
 );

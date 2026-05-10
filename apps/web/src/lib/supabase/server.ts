@@ -7,9 +7,9 @@ export async function createSupabaseServerClient() {
   const cookieStore = await cookies();
   const env = getServerEnv();
 
-  return createServerClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
+  return createServerClient(env.NEXT_PUBLIC_SUPABASE_URL, env.NEXT_PUBLIC_SUPABASE_ANON_KEY, {
     cookies: {
-      get: (name) => cookieStore.get(name)?.value,
+      get: (name: string) => cookieStore.get(name)?.value,
       set: (name: string, value: string, options: CookieOptions) => {
         try {
           cookieStore.set({ name, value, ...options });

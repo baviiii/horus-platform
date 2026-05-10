@@ -4,14 +4,14 @@
 
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions", "fullTextSearchPostgres"]
+  previewFeatures = ["postgresqlExtensions", "fullTextSearch"]
 }
 
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL")
-  extensions = [pgcrypto, vector(map: "vector"), pg_trgm]
+  extensions = [pgcrypto, pg_trgm]
 }
 
 // =============================================================================
@@ -48,9 +48,6 @@ model Tenant {
   members        TenantMember[]
   apiKeys        ApiKey[]
   documents      Document[]
-  chunks         Chunk[]
-  entities       Entity[]
-  relationships  Relationship[]
   chatSessions   ChatSession[]
   prompts        Prompt[]
   usageRecords   UsageRecord[]
@@ -145,107 +142,24 @@ model Document {
   status       DocStatus @default(PENDING)
   pageCount    Int?
   chunksCount  Int       @default(0)
-  searchIndex  String? // Azure AI Search index name
   metadata     Json      @default("{}")
   errorMessage String?
   uploadedById String    @db.Uuid
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
-  indexedAt    DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  indexedAt   DateTime?
 
-  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  chunks   Chunk[]
-  entities DocumentEntity[]
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
 
   @@index([tenantId, status])
   @@index([tenantId, category])
   @@map("documents")
 }
 
-model Chunk {
-  id          String                       @id @default(uuid()) @db.Uuid
-  tenantId    String                       @db.Uuid
-  documentId  String                       @db.Uuid
-  ordinal     Int
-  text        String
-  searchId    String? // ID in Azure AI Search
-  embedding   Unsupported("vector(3072)")?
-  pageNumber  Int?
-  charStart   Int?
-  charEnd     Int?
-  metadata    Json                         @default("{}")
-  createdAt   DateTime                     @default(now())
-
-  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-
-  @@unique([documentId, ordinal])
-  @@index([tenantId, documentId])
-  @@index([searchId])
-  @@map("chunks")
-}
-
-// =============================================================================
-// Knowledge Graph (mirror of Cosmos/Neo4j; canonical IDs live here)
-// =============================================================================
-
-model Entity {
-  id          String   @id @default(uuid()) @db.Uuid
-  tenantId    String   @db.Uuid
-  name        String
-  type        String // organization, program, policy, funding, skill, occupation, etc.
-  graphNodeId String? // Cosmos vertex / Neo4j node ID
-  aliases     String[] @default([])
-  metadata    Json     @default("{}")
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  documents  DocumentEntity[]
-  outgoing   Relationship[]   @relation("FromEntity")
-  incoming   Relationship[]   @relation("ToEntity")
-
-  @@unique([tenantId, type, name])
-  @@index([tenantId, type])
-  @@index([graphNodeId])
-  @@map("entities")
-}
-
-model Relationship {
-  id           String   @id @default(uuid()) @db.Uuid
-  tenantId     String   @db.Uuid
-  fromEntityId String   @db.Uuid
-  toEntityId   String   @db.Uuid
-  type         String // funds, employs, requires, located_in, contradicts, supports...
-  confidence   Float    @default(1.0)
-  metadata     Json     @default("{}")
-  createdAt    DateTime @default(now())
-
-  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  fromEntity Entity @relation("FromEntity", fields: [fromEntityId], references: [id], onDelete: Cascade)
-  toEntity   Entity @relation("ToEntity", fields: [toEntityId], references: [id], onDelete: Cascade)
-
-  @@unique([tenantId, fromEntityId, toEntityId, type])
-  @@index([tenantId, type])
-  @@map("relationships")
-}
-
-model DocumentEntity {
-  id         String   @id @default(uuid()) @db.Uuid
-  tenantId   String   @db.Uuid
-  documentId String   @db.Uuid
-  entityId   String   @db.Uuid
-  mentions   Int      @default(1)
-  pages      Int[]    @default([])
-  createdAt  DateTime @default(now())
-
-  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
-  entity   Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
-
-  @@unique([documentId, entityId])
-  @@index([tenantId])
-  @@map("document_entities")
-}
+// Chunks, embeddings, entities and relationships are deliberately NOT modelled
+// in Postgres. They live in Azure AI Search (chunks + vectors) and Cosmos
+// Gremlin (graph). Postgres holds only the document row; everything derived
+// is queried through the orchestrator.
 
 // =============================================================================
 // Chat / RAG sessions

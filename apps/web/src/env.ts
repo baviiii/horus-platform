@@ -6,8 +6,10 @@ const ServerEnvSchema = z.object({
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url().optional(),
 
-  SUPABASE_URL: z.string().url(),
-  SUPABASE_ANON_KEY: z.string().min(1),
+  // Public Supabase config — same values the browser sees, but the server
+  // also reads them so SSR + route handlers can build a Supabase client.
+  NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
   SUPABASE_SERVICE_ROLE_KEY: z.string().min(1).optional(),
 
   AZURE_OPENAI_ENDPOINT: z.string().url().optional(),

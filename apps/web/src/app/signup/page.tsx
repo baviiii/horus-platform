@@ -1,0 +1,308 @@
+'use client';
+
+import { useState } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
+import { Container, Wordmark } from '@/components/horus';
+import { Aurora, Magnetic } from '@/components/motion';
+
+export default function SignupPage() {
+  const params = useSearchParams();
+  const planParam = params.get('plan');
+
+  const [email, setEmail] = useState('');
+  const [orgName, setOrgName] = useState('');
+  const [sent, setSent] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          data: { intended_org_name: orgName, intended_plan: planParam ?? 'free' },
+          emailRedirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
+        },
+      });
+      if (error) setError(error.message);
+      else setSent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Something went wrong.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleGoogle() {
+    try {
+      const supabase = createSupabaseBrowserClient();
+      await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/api/auth/callback?next=/onboarding`,
+        },
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google sign-up failed.');
+    }
+  }
+
+  return (
+    <Aurora intensity={1.2}>
+      <main className="bg-paper relative min-h-screen">
+        <div className="bg-grid pointer-events-none absolute inset-0" />
+        <div className="bg-wash pointer-events-none absolute inset-0" />
+
+        <header className="relative z-10">
+          <Container size="wide" className="flex h-16 items-center justify-between">
+            <Link href="/" className="transition-opacity hover:opacity-80">
+              <Wordmark size="sm" />
+            </Link>
+            <Link
+              href="/login"
+              className="text-ink-faded hover:text-ink text-[13px] font-medium transition-colors"
+            >
+              Already have an account?{' '}
+              <span className="text-ink underline-offset-4 hover:underline">Sign in</span>
+            </Link>
+          </Container>
+        </header>
+
+        <div className="relative z-10 mx-auto grid max-w-[1180px] gap-12 px-6 pb-24 pt-12 lg:grid-cols-[1.1fr_1fr] lg:gap-20">
+          {/* Left column — pitch + selected plan */}
+          <aside className="hidden flex-col justify-between lg:flex">
+            <div className="animate-rise">
+              <span className="chip chip-dot">Free to start</span>
+              <h1 className="text-ink mt-7 text-balance text-5xl font-semibold leading-[1.05] tracking-[-0.03em] md:text-6xl">
+                <span className="text-display">Build something that</span>{' '}
+                <span className="serif-italic text-cobalt font-normal">thinks.</span>
+              </h1>
+              <p className="text-ink-faded mt-5 max-w-md text-[17px] leading-relaxed">
+                Two minutes from sign-up to your first answer with citations. No card required.
+                Cancel by ignoring it.
+              </p>
+
+              <ul className="mt-10 space-y-4">
+                {[
+                  'Free up to 10,000 queries per month',
+                  'All capabilities included on every plan',
+                  'Postgres-grade tenant isolation, day one',
+                  'TypeScript, Python, Go, Swift SDKs',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-3">
+                    <span className="bg-accent/10 mt-1 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full">
+                      <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+                        <path
+                          d="M2 6l2.5 2.5L9 3"
+                          stroke="hsl(var(--accent))"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </span>
+                    <span className="text-ink-soft text-[15px]">{item}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {planParam && (
+              <div className="border-hairline bg-paper-soft animate-rise mt-10 rounded-2xl border p-5 [animation-delay:200ms]">
+                <div className="eyebrow">Selected plan</div>
+                <div className="mt-2 flex items-baseline justify-between">
+                  <div className="text-ink text-xl font-semibold capitalize tracking-tight">
+                    {planParam}
+                  </div>
+                  <Link
+                    href="/#pricing"
+                    className="text-ink-faded text-[12px] underline-offset-4 hover:underline"
+                  >
+                    Change
+                  </Link>
+                </div>
+              </div>
+            )}
+          </aside>
+
+          {/* Right column — form */}
+          <div className="w-full max-w-[460px] justify-self-center lg:justify-self-end">
+            <div className="border-hairline bg-paper/80 animate-rise relative rounded-3xl border p-8 shadow-md backdrop-blur-xl [animation-delay:120ms]">
+              <div className="from-accent/15 pointer-events-none absolute -inset-px -z-10 rounded-3xl bg-gradient-to-b via-transparent to-transparent blur-xl" />
+              {sent ? (
+                <div className="space-y-5 py-4 text-center">
+                  <div className="bg-accent/10 mx-auto flex h-12 w-12 items-center justify-center rounded-full">
+                    <svg
+                      width="22"
+                      height="22"
+                      viewBox="0 0 22 22"
+                      fill="none"
+                      className="text-accent"
+                    >
+                      <path
+                        d="M3 6l8 6 8-6M3 6v10a1 1 0 001 1h14a1 1 0 001-1V6M3 6a1 1 0 011-1h14a1 1 0 011 1"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </div>
+                  <h2 className="text-ink text-2xl font-semibold tracking-tight">
+                    Confirmation sent
+                  </h2>
+                  <p className="text-ink-faded text-[14px] leading-relaxed">
+                    We sent a sign-up link to <span className="text-ink font-medium">{email}</span>.
+                    <br />
+                    Click it to finish creating your workspace.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => setSent(false)}
+                    className="text-accent text-[13px] font-medium underline-offset-4 hover:underline"
+                  >
+                    Use a different email
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-ink text-[26px] font-semibold tracking-tight">
+                    Create your workspace
+                  </h2>
+                  <p className="text-ink-faded mt-1.5 text-[14px]">
+                    We'll set up your tenant and send you a single-use link.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={handleGoogle}
+                    className="border-hairline-strong bg-paper text-ink hover:bg-paper-soft mt-6 flex h-11 w-full items-center justify-center gap-2.5 rounded-full border text-[14px] font-medium transition-colors"
+                  >
+                    <GoogleIcon />
+                    Continue with Google
+                  </button>
+
+                  <div className="text-ink-mute my-5 flex items-center gap-3 text-[11px] uppercase tracking-[0.2em]">
+                    <span className="bg-hairline h-px flex-1" />
+                    <span>or</span>
+                    <span className="bg-hairline h-px flex-1" />
+                  </div>
+
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    <label className="block">
+                      <span className="text-ink text-[13px] font-medium">Workspace name</span>
+                      <div className="focus-ring mt-1.5 rounded-xl">
+                        <input
+                          type="text"
+                          required
+                          value={orgName}
+                          onChange={(e) => setOrgName(e.target.value)}
+                          placeholder="Acme Research"
+                          className="border-hairline-strong bg-paper text-ink placeholder:text-ink-mute focus:border-accent block h-11 w-full rounded-xl border px-4 text-[15px] focus:outline-none"
+                        />
+                      </div>
+                      <span className="text-ink-faded mt-1.5 block text-[12px]">
+                        You can change this later.
+                      </span>
+                    </label>
+
+                    <label className="block">
+                      <span className="text-ink text-[13px] font-medium">Work email</span>
+                      <div className="focus-ring mt-1.5 rounded-xl">
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="you@company.com"
+                          className="border-hairline-strong bg-paper text-ink placeholder:text-ink-mute focus:border-accent block h-11 w-full rounded-xl border px-4 text-[15px] focus:outline-none"
+                        />
+                      </div>
+                    </label>
+
+                    <Magnetic strength={5}>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-ink text-paper shadow-blue hover:shadow-blue-lg group relative flex h-11 w-full items-center justify-center gap-1 overflow-hidden rounded-full text-[14px] font-medium transition-shadow disabled:opacity-60"
+                      >
+                        <span className="from-accent-deep via-accent to-accent-glow absolute inset-0 -translate-x-full bg-gradient-to-r transition-transform duration-500 group-hover:translate-x-0" />
+                        <span className="relative flex items-center gap-1.5">
+                          {loading ? 'Sending…' : 'Create workspace'}
+                          {!loading && (
+                            <svg
+                              width="14"
+                              height="14"
+                              viewBox="0 0 14 14"
+                              fill="none"
+                              className="transition-transform group-hover:translate-x-0.5"
+                            >
+                              <path
+                                d="M3 7h8m0 0L7 3m4 4l-4 4"
+                                stroke="currentColor"
+                                strokeWidth="1.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          )}
+                        </span>
+                      </button>
+                    </Magnetic>
+
+                    {error && (
+                      <p className="rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-700">
+                        {error}
+                      </p>
+                    )}
+                  </form>
+                </>
+              )}
+            </div>
+
+            <p className="text-ink-faded mt-5 text-center text-[12px]">
+              By creating an account you agree to our{' '}
+              <Link href="/terms" className="text-ink underline-offset-4 hover:underline">
+                Terms
+              </Link>{' '}
+              and{' '}
+              <Link href="/privacy" className="text-ink underline-offset-4 hover:underline">
+                Privacy Policy
+              </Link>
+              .
+            </p>
+          </div>
+        </div>
+      </main>
+    </Aurora>
+  );
+}
+
+function GoogleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" aria-hidden>
+      <path
+        d="M17.64 9.205c0-.639-.057-1.252-.164-1.841H9v3.481h4.844a4.14 4.14 0 01-1.796 2.716v2.258h2.908c1.702-1.567 2.684-3.875 2.684-6.614z"
+        fill="#4285F4"
+      />
+      <path
+        d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 009 18z"
+        fill="#34A853"
+      />
+      <path
+        d="M3.964 10.71A5.41 5.41 0 013.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 000 9c0 1.452.348 2.827.957 4.042l3.007-2.332z"
+        fill="#FBBC05"
+      />
+      <path
+        d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 00.957 4.958L3.964 7.29C4.672 5.163 6.656 3.58 9 3.58z"
+        fill="#EA4335"
+      />
+    </svg>
+  );
+}

@@ -1,8 +1,7 @@
 import type { Tenant, ApiKey } from '@horus/db';
-import { prisma, createTenantScopedClient } from '@horus/db';
+import { prisma, createTenantScopedClient, type PrismaClient } from '@horus/db';
 import { resolveTenant } from '@horus/tenancy';
 import { validateApiKey } from '@horus/auth';
-import type { PrismaClient } from '@prisma/client';
 
 export type AuthedUser = {
   id: string;

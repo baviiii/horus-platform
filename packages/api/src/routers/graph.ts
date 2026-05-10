@@ -24,12 +24,10 @@ export const graphRouter = router({
         cursor: z.string().optional(),
       }),
     )
-    .query(async ({ ctx, input }) => {
-      return ctx.db.entity.findMany({
-        where: { ...(input.type && { type: input.type }) },
-        take: input.limit,
-        ...(input.cursor && { cursor: { id: input.cursor }, skip: 1 }),
-        orderBy: { createdAt: 'desc' },
+    .query(async () => {
+      throw new TRPCError({
+        code: 'NOT_IMPLEMENTED',
+        message: 'graph.entities — Cosmos Gremlin backend (Phase 2)',
       });
     }),
 

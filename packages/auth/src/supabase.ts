@@ -31,9 +31,10 @@ export function createServerSupabase(cookies: CookieStore) {
   const env = readEnv();
   return createServerClient(env.SUPABASE_URL, env.SUPABASE_ANON_KEY, {
     cookies: {
-      get: (name) => cookies.get(name)?.value,
-      set: (name, value, options) => cookies.set(name, value, options),
-      remove: (name, options) => cookies.remove(name, options),
+      get: (name: string) => cookies.get(name)?.value,
+      set: (name: string, value: string, options: Record<string, unknown>) =>
+        cookies.set(name, value, options),
+      remove: (name: string, options: Record<string, unknown>) => cookies.remove(name, options),
     },
   });
 }

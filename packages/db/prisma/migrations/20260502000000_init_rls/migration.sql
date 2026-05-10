@@ -1,6 +1,5 @@
 -- Enable required Postgres extensions
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
-CREATE EXTENSION IF NOT EXISTS vector;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 -- =============================================================================
@@ -30,10 +29,6 @@ BEGIN
     'tenant_modules',
     'api_keys',
     'documents',
-    'chunks',
-    'entities',
-    'relationships',
-    'document_entities',
     'chat_sessions',
     'chat_messages',
     'prompts',
@@ -58,15 +53,15 @@ BEGIN
           USING (
             EXISTS (
               SELECT 1 FROM chat_sessions s
-              WHERE s.id = chat_messages.session_id
-                AND s.tenant_id = current_tenant_id()
+              WHERE s.id = chat_messages."sessionId"
+                AND s."tenantId" = current_tenant_id()
             )
           )
           WITH CHECK (
             EXISTS (
               SELECT 1 FROM chat_sessions s
-              WHERE s.id = chat_messages.session_id
-                AND s.tenant_id = current_tenant_id()
+              WHERE s.id = chat_messages."sessionId"
+                AND s."tenantId" = current_tenant_id()
             )
           );
       $p$, tbl);
@@ -74,14 +69,14 @@ BEGIN
     ELSIF tbl = 'prompts' THEN
       EXECUTE format($p$
         CREATE POLICY tenant_isolation ON %I
-          USING (tenant_id = current_tenant_id() OR tenant_id IS NULL)
-          WITH CHECK (tenant_id = current_tenant_id() OR tenant_id IS NULL);
+          USING ("tenantId" = current_tenant_id() OR "tenantId" IS NULL)
+          WITH CHECK ("tenantId" = current_tenant_id() OR "tenantId" IS NULL);
       $p$, tbl);
     ELSE
       EXECUTE format($p$
         CREATE POLICY tenant_isolation ON %I
-          USING (tenant_id = current_tenant_id())
-          WITH CHECK (tenant_id = current_tenant_id());
+          USING ("tenantId" = current_tenant_id())
+          WITH CHECK ("tenantId" = current_tenant_id());
       $p$, tbl);
     END IF;
   END LOOP;
