@@ -1,3 +1,3 @@
-export { prisma, createTenantScopedClient } from './client.js';
-export type * from './types.js';
+export { prisma, createTenantScopedClient } from './client';
+export type * from './types';
 export { Prisma, PrismaClient } from '@prisma/client';

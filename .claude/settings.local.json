@@ -12,7 +12,10 @@
       "Bash(nslookup db.xrgomhiwposlbxwkdudg.supabase.co)",
       "Bash(nslookup aws-0-ap-southeast-2.pooler.supabase.com)",
       "Bash(curl -s -o /dev/null -w \"%{http_code}\" \"https://xrgomhiwposlbxwkdudg.supabase.co/rest/v1/\" -H \"apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhyZ29taGl3cG9zbGJ4d2tkdWRnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg0MDUzMDQsImV4cCI6MjA5Mzk4MTMwNH0.EPYrAJZHWi79G0_iokluyq3osRAk7WXXlXlazJlLHRY\")",
-      "Bash(pnpm dev *)"
+      "Bash(pnpm dev *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/login)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:3000/signup)"
     ]
   }
 }
