@@ -31,7 +31,7 @@ export default async function OnboardingPage() {
     where: { userId: user.id },
     include: { tenant: true },
   });
-  if (existing) redirect(`/_t/${existing.tenant.slug}`);
+  if (existing) redirect(`/t/${existing.tenant.slug}`);
 
   // Pull intent from auth metadata (set in /signup form).
   const meta = (user.user_metadata ?? {}) as {
@@ -56,5 +56,5 @@ export default async function OnboardingPage() {
     },
   });
 
-  redirect(`/_t/${tenant.slug}`);
+  redirect(`/t/${tenant.slug}`);
 }

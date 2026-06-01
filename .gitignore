@@ -44,3 +44,19 @@ test-results/
 # Misc
 .cache/
 *.tsbuildinfo
+
+# Claude Code (per-developer)
+.claude/settings.local.json
+
+# OpenTofu / Terraform
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+# tfvars often contain secrets; keep .example committed
+*.tfvars
+*.tfvars.json
+!*.tfvars.example

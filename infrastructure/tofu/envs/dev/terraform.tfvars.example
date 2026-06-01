@@ -1,0 +1,4 @@
+project     = "horus"
+environment = "dev"
+location    = "australiaeast"
+owner       = "platform"

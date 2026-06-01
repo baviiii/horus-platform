@@ -29,7 +29,7 @@ export default async function TenantOverview({ params }: { params: Promise<{ ten
         actions={
           <>
             <Link
-              href={`/_t/${slug}/documents`}
+              href={`/t/${slug}/documents`}
               className="border-hairline-strong bg-paper text-ink hover:bg-paper-soft inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-[13px] font-medium transition-colors"
             >
               <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
@@ -43,7 +43,7 @@ export default async function TenantOverview({ params }: { params: Promise<{ ten
               Upload
             </Link>
             <Link
-              href={`/_t/${slug}/chat`}
+              href={`/t/${slug}/chat`}
               className="bg-ink text-paper hover:bg-ink-soft inline-flex h-9 items-center gap-1.5 rounded-full px-4 text-[13px] font-medium transition-colors"
             >
               New chat
@@ -128,7 +128,7 @@ export default async function TenantOverview({ params }: { params: Promise<{ ten
           description={`${openAlerts.length} need attention`}
           action={
             <Link
-              href={`/_t/${slug}/alerts`}
+              href={`/t/${slug}/alerts`}
               className="text-accent text-[12px] font-medium underline-offset-4 hover:underline"
             >
               View all
@@ -167,7 +167,7 @@ export default async function TenantOverview({ params }: { params: Promise<{ ten
           title="Recent documents"
           action={
             <Link
-              href={`/_t/${slug}/documents`}
+              href={`/t/${slug}/documents`}
               className="text-accent text-[12px] font-medium underline-offset-4 hover:underline"
             >
               All documents
@@ -225,7 +225,7 @@ export default async function TenantOverview({ params }: { params: Promise<{ ten
           title="Members"
           action={
             <Link
-              href={`/_t/${slug}/settings/members`}
+              href={`/t/${slug}/settings/members`}
               className="text-accent text-[12px] font-medium underline-offset-4 hover:underline"
             >
               Manage

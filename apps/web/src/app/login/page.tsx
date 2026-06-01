@@ -10,7 +10,7 @@ import { Aurora, Magnetic } from '@/components/motion';
 export default function LoginPage() {
   const params = useSearchParams();
   const errorParam = params.get('error');
-  const next = params.get('next') ?? '/';
+  const next = params.get('next') ?? '/onboarding';
 
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);

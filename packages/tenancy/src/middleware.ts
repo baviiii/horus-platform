@@ -40,8 +40,8 @@ export function buildTenancyMiddleware(opts: {
       headers.set('x-horus-tenant-slug', tenantSlug);
 
       // Rewrite to tenant-scoped route group if not already targeting it
-      if (!url.pathname.startsWith('/_t/')) {
-        url.pathname = `/_t/${tenantSlug}${url.pathname}`;
+      if (!url.pathname.startsWith('/t/')) {
+        url.pathname = `/t/${tenantSlug}${url.pathname}`;
         return NextResponse.rewrite(url, { request: { headers } });
       }
 

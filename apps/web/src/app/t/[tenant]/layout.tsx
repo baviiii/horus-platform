@@ -14,27 +14,27 @@ export default async function TenantLayout({
   const groups: NavGroup[] = [
     {
       items: [
-        { href: `/_t/${slug}`, label: 'Overview', icon: <IconHome /> },
-        { href: `/_t/${slug}/chat`, label: 'Chat', icon: <IconChat /> },
-        { href: `/_t/${slug}/documents`, label: 'Documents', icon: <IconDoc /> },
-        { href: `/_t/${slug}/graph`, label: 'Knowledge graph', icon: <IconGraph /> },
-        { href: `/_t/${slug}/alerts`, label: 'Alerts', icon: <IconBell />, badge: '3' },
+        { href: `/t/${slug}`, label: 'Overview', icon: <IconHome /> },
+        { href: `/t/${slug}/chat`, label: 'Chat', icon: <IconChat /> },
+        { href: `/t/${slug}/documents`, label: 'Documents', icon: <IconDoc /> },
+        { href: `/t/${slug}/graph`, label: 'Knowledge graph', icon: <IconGraph /> },
+        { href: `/t/${slug}/alerts`, label: 'Alerts', icon: <IconBell />, badge: '3' },
       ],
     },
     {
       title: 'Workspace',
       items: [
-        { href: `/_t/${slug}/settings`, label: 'Settings', icon: <IconCog /> },
-        { href: `/_t/${slug}/settings/members`, label: 'Members', icon: <IconPeople /> },
-        { href: `/_t/${slug}/settings/keys`, label: 'API keys', icon: <IconKey /> },
-        { href: `/_t/${slug}/settings/billing`, label: 'Billing', icon: <IconBill /> },
+        { href: `/t/${slug}/settings`, label: 'Settings', icon: <IconCog /> },
+        { href: `/t/${slug}/settings/members`, label: 'Members', icon: <IconPeople /> },
+        { href: `/t/${slug}/settings/keys`, label: 'API keys', icon: <IconKey /> },
+        { href: `/t/${slug}/settings/billing`, label: 'Billing', icon: <IconBill /> },
       ],
     },
   ];
 
   return (
     <AppShell
-      brand={{ name: tenantName, href: `/_t/${slug}`, tag: mockTenant.plan }}
+      brand={{ name: tenantName, href: `/t/${slug}`, tag: mockTenant.plan }}
       groups={groups}
       user={{
         name: mockUser.displayName,

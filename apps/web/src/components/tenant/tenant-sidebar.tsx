@@ -24,7 +24,7 @@ export function TenantSidebar({
   plan: string;
 }) {
   const pathname = usePathname();
-  const base = `/_t/${slug}`;
+  const base = `/t/${slug}`;
 
   return (
     <aside className="border-hairline bg-midnight-deep/80 fixed inset-y-0 left-0 z-30 hidden w-72 flex-col border-r backdrop-blur-md lg:flex">

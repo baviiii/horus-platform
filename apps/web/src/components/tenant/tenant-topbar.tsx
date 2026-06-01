@@ -24,7 +24,7 @@ export function TenantTopbar({
   user: { displayName: string; email: string; initials: string; role: string };
 }) {
   const pathname = usePathname();
-  const segs = pathname?.split(`/_t/${tenantSlug}`)[1]?.split('/').filter(Boolean) ?? [];
+  const segs = pathname?.split(`/t/${tenantSlug}`)[1]?.split('/').filter(Boolean) ?? [];
   const current = SEGMENT_LABEL[segs[0] ?? ''] ?? 'Overview';
 
   return (
@@ -37,7 +37,7 @@ export function TenantTopbar({
           <span className="text-parchment-soft/55">Workspace</span>
           <span className="text-gold">/</span>
           <Link
-            href={`/_t/${tenantSlug}`}
+            href={`/t/${tenantSlug}`}
             className="text-parchment hover:text-gold-bright transition-colors"
           >
             {tenantName}
@@ -55,7 +55,7 @@ export function TenantTopbar({
 
         <div className="flex items-center gap-3">
           <Button asChild size="sm" variant="outline">
-            <Link href={`/_t/${tenantSlug}/chat`}>+ New chart</Link>
+            <Link href={`/t/${tenantSlug}/chat`}>+ New chart</Link>
           </Button>
 
           <button
