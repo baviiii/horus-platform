@@ -2,3 +2,19 @@ project     = "horus"
 environment = "dev"
 location    = "australiaeast"
 owner       = "platform"
+
+# Foundry account region — must offer chat + embedding + realtime models and
+# the Agent Service. eastus2 always has everything first.
+foundry_location = "eastus2"
+
+# Model deployments on the Foundry project.
+chat_model     = "gpt-4o"
+chat_capacity  = 50
+realtime_model = "gpt-realtime-2.1-mini"
+
+# Grounding with Bing Search (live web search tool for agents; pay per 1k queries).
+# Requires a pay-as-you-go/EA subscription — sponsored offers fail SkuNotEligible.
+deploy_bing_grounding = false
+
+# Azure AI Search — free for the playground; basic+ for real tenants.
+search_sku = "free"

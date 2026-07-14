@@ -1,157 +1,104 @@
+import { prisma } from '@horus/db';
 import { PageHeader, Panel, Pill, StatCard } from '@/components/app/shell';
 import { Reveal } from '@/components/motion';
 import { Button } from '@/components/ui/button';
-import { mockDocuments, mockTenantStats } from '@/lib/mock-data';
+import { requireTenantMember } from '@/lib/tenant-context';
 
 export const metadata = { title: 'Documents · Horus' };
+export const dynamic = 'force-dynamic';
 
 export default async function DocumentsPage({ params }: { params: Promise<{ tenant: string }> }) {
-  await params;
+  const { tenant: slug } = await params;
+  const { tenant } = await requireTenantMember(slug);
+
+  const [documents, indexed, processing, failed] = await Promise.all([
+    prisma.document.findMany({
+      where: { tenantId: tenant.id },
+      orderBy: { createdAt: 'desc' },
+      take: 100,
+    }),
+    prisma.document.count({ where: { tenantId: tenant.id, status: 'INDEXED' } }),
+    prisma.document.count({
+      where: { tenantId: tenant.id, status: { in: ['PENDING', 'PROCESSING'] } },
+    }),
+    prisma.document.count({ where: { tenantId: tenant.id, status: 'FAILED' } }),
+  ]);
 
   return (
     <>
       <PageHeader
         eyebrow="Documents"
-        title="Sources, indexed and searchable."
-        description="Upload PDFs, regulations, memos, transcripts. Horus chunks, embeds, and graphs them — usually in under a minute."
+        title="The knowledge this workspace runs on."
+        description="Every document here is chunked, embedded, and indexed for retrieval. Agents cite them by passage."
         actions={
-          <>
-            <Button variant="outline" size="sm">
-              Connect drive
-            </Button>
-            <Button size="sm">Upload</Button>
-          </>
+          <Button
+            size="sm"
+            disabled
+            title="Workspace ingestion lands next — the playground pipeline is the engine"
+          >
+            Upload documents
+          </Button>
         }
       />
 
       <div className="reveal-stagger grid gap-4 md:grid-cols-4">
-        <StatCard label="Documents" value={mockTenantStats.documents.toLocaleString()} />
-        <StatCard
-          label="Pages"
-          value={mockTenantStats.pages.toLocaleString()}
-          delta="+1.2k"
-          trend="up"
-        />
-        <StatCard
-          label="Storage"
-          value={`${mockTenantStats.storageGb} GB`}
-          delta={`of ${mockTenantStats.storageLimitGb} GB`}
-        />
-        <StatCard label="Indexed today" value="12" delta="2 processing" trend="flat" />
+        <StatCard label="Total" value={String(documents.length)} />
+        <StatCard label="Indexed" value={String(indexed)} />
+        <StatCard label="Processing" value={String(processing)} />
+        <StatCard label="Failed" value={String(failed)} />
       </div>
 
-      <div className="reveal-stagger mt-8 flex flex-wrap items-center gap-2 text-[12px]">
-        <FilterChip active>All</FilterChip>
-        <FilterChip>Regulations</FilterChip>
-        <FilterChip>Frameworks</FilterChip>
-        <FilterChip>Memos</FilterChip>
-        <FilterChip>Processing</FilterChip>
-        <div className="ml-auto flex items-center gap-2">
-          <input
-            type="search"
-            placeholder="Search title, entity, citation…"
-            className="border-hairline bg-paper text-ink placeholder:text-ink-mute focus:border-accent h-8 w-64 rounded-full border px-3.5 text-[12.5px] focus:outline-none"
-          />
-        </div>
-      </div>
-
-      <Reveal as="div">
-        <Panel className="mt-4">
-          <div className="-mx-6 -my-6 overflow-x-auto">
-            <table className="w-full min-w-[840px] text-left text-[13px]">
-              <thead>
-                <tr className="border-hairline text-ink-mute border-b text-[10px] font-semibold uppercase tracking-[0.16em]">
-                  <th className="px-6 py-3">Title</th>
-                  <th className="px-3 py-3">Type</th>
-                  <th className="px-3 py-3 text-right">Pages</th>
-                  <th className="px-3 py-3 text-right">Chunks</th>
-                  <th className="px-3 py-3 text-right">Citations</th>
-                  <th className="px-3 py-3">Status</th>
-                  <th className="px-3 py-3">Uploader</th>
-                  <th className="px-6 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {mockDocuments.map((d) => (
-                  <tr
-                    key={d.id}
-                    className="border-hairline/60 hover:bg-paper-soft border-b transition-colors last:border-b-0"
+      <Reveal as="div" className="mt-8">
+        <Panel title="All documents">
+          {documents.length === 0 ? (
+            <div className="py-8 text-center">
+              <p className="text-ink text-[15px] font-medium">No documents yet.</p>
+              <p className="text-ink-faded mx-auto mt-1.5 max-w-md text-[13.5px] leading-relaxed">
+                Workspace ingestion is the next milestone — the same crawl → chunk → embed → index
+                pipeline that already runs live in the playground, pointed at your own documents
+                with permanent storage.
+              </p>
+            </div>
+          ) : (
+            <ul className="divide-hairline -my-2 divide-y">
+              {documents.map((doc) => (
+                <li key={doc.id} className="flex flex-wrap items-center gap-4 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-ink truncate text-[14px] font-medium">{doc.title}</div>
+                    <div className="text-ink-faded mt-0.5 flex flex-wrap items-center gap-2 text-[12px]">
+                      <span>{doc.category ?? 'document'}</span>
+                      <span>·</span>
+                      <span>{doc.chunksCount} chunks</span>
+                      {doc.pageCount ? (
+                        <>
+                          <span>·</span>
+                          <span>{doc.pageCount} pp</span>
+                        </>
+                      ) : null}
+                      <span>·</span>
+                      <span>{doc.createdAt.toLocaleDateString()}</span>
+                    </div>
+                    {doc.errorMessage && (
+                      <div className="text-destructive mt-1 text-[12px]">{doc.errorMessage}</div>
+                    )}
+                  </div>
+                  <Pill
+                    tone={
+                      doc.status === 'INDEXED'
+                        ? 'success'
+                        : doc.status === 'FAILED'
+                          ? 'danger'
+                          : 'warn'
+                    }
                   >
-                    <td className="px-6 py-3.5">
-                      <div className="text-ink font-medium">{d.title}</div>
-                      <div className="font-technical text-ink-mute mt-0.5 text-[11px]">{d.id}</div>
-                    </td>
-                    <td className="text-ink-faded px-3 py-3.5">{d.type}</td>
-                    <td className="num text-ink-soft px-3 py-3.5 text-right tabular-nums">
-                      {d.pages}
-                    </td>
-                    <td className="num text-ink-soft px-3 py-3.5 text-right tabular-nums">
-                      {d.chunks.toLocaleString()}
-                    </td>
-                    <td className="num text-ink-soft px-3 py-3.5 text-right tabular-nums">
-                      {d.citations}
-                    </td>
-                    <td className="px-3 py-3.5">
-                      <Pill tone={statusTone(d.status)}>{d.status.toLowerCase()}</Pill>
-                    </td>
-                    <td className="text-ink-faded px-3 py-3.5">{d.uploader}</td>
-                    <td className="px-6 py-3.5 text-right">
-                      <button
-                        type="button"
-                        className="text-ink-faded hover:text-ink transition-colors"
-                        aria-label="Open"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                          <path
-                            d="M5 3l4 4-4 4"
-                            stroke="currentColor"
-                            strokeWidth="1.4"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    {doc.status.toLowerCase()}
+                  </Pill>
+                </li>
+              ))}
+            </ul>
+          )}
         </Panel>
       </Reveal>
-
-      <div className="text-ink-faded mt-6 flex items-center justify-between text-[12px]">
-        <span>Showing 7 of {mockTenantStats.documents.toLocaleString()}</span>
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" disabled>
-            Previous
-          </Button>
-          <Button variant="outline" size="sm">
-            Next
-          </Button>
-        </div>
-      </div>
     </>
   );
-}
-
-function FilterChip({ children, active }: { children: React.ReactNode; active?: boolean }) {
-  return (
-    <button
-      type="button"
-      className={
-        active
-          ? 'bg-ink text-paper rounded-full px-3 py-1 text-[12px] font-medium'
-          : 'border-hairline bg-paper text-ink-faded hover:border-hairline-strong hover:text-ink rounded-full border px-3 py-1 text-[12px] transition-colors'
-      }
-    >
-      {children}
-    </button>
-  );
-}
-
-function statusTone(s: 'INDEXED' | 'PROCESSING' | 'FAILED'): 'success' | 'accent' | 'danger' {
-  if (s === 'INDEXED') return 'success';
-  if (s === 'PROCESSING') return 'accent';
-  return 'danger';
 }

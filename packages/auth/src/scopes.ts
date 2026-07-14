@@ -15,6 +15,9 @@ export const SCOPES = {
   ENTITIES_WRITE: 'entities:write',
   ALERTS_READ: 'alerts:read',
   ALERTS_WRITE: 'alerts:write',
+  CONNECTIONS_READ: 'connections:read',
+  CONNECTIONS_WRITE: 'connections:write',
+  INTELLIGENCE_INFER: 'intelligence:infer',
   ADMIN: 'admin:*',
 } as const;
 

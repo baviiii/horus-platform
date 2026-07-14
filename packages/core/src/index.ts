@@ -5,3 +5,8 @@ export * as entities from './entities/index.js';
 export * as reasoning from './reasoning/index.js';
 export * as alerts from './alerts/index.js';
 export * as clients from './clients/index.js';
+export * as inference from './inference/index.js';
+export * as knowledge from './knowledge/index.js';
+export * as agent from './agent/index.js';
+export * as safety from './safety/index.js';
+export * as mcp from './mcp/index.js';

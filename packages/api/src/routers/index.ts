@@ -10,6 +10,7 @@ import { alertsRouter } from './alerts.js';
 import { adminRouter } from './admin.js';
 import { billingRouter } from './billing.js';
 import { tenantRouter } from './tenant.js';
+import { connectionsRouter } from './connections.js';
 
 export const appRouter = router({
   health: healthRouter,
@@ -23,6 +24,7 @@ export const appRouter = router({
   alerts: alertsRouter,
   admin: adminRouter,
   billing: billingRouter,
+  connections: connectionsRouter,
 });
 
 export type AppRouter = typeof appRouter;

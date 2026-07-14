@@ -38,21 +38,23 @@ async function main() {
     },
   });
 
-  // Platform-default prompts (extracted from existing intelligencePrompts)
-  await prisma.prompt.upsert({
-    where: {
-      tenantId_key_version: { tenantId: null as unknown as string, key: 'rag-default', version: 1 },
-    },
-    update: {},
-    create: {
-      tenantId: null,
-      key: 'rag-default',
-      version: 1,
-      template:
-        'You are a careful research assistant. Answer using only the provided sources. Cite each claim with [n].',
-      isActive: true,
-    },
+  // Platform-default prompts. Compound-unique upsert can't match NULL
+  // tenantId, so emulate it with findFirst + create.
+  const ragDefault = await prisma.prompt.findFirst({
+    where: { tenantId: null, key: 'rag-default', version: 1 },
   });
+  if (!ragDefault) {
+    await prisma.prompt.create({
+      data: {
+        tenantId: null,
+        key: 'rag-default',
+        version: 1,
+        template:
+          'You are a careful research assistant. Answer using only the provided sources. Cite each claim with [n].',
+        isActive: true,
+      },
+    });
+  }
 
   console.log('Seed complete:', {
     platformTenant: platformTenant.id,

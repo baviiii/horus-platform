@@ -1,3 +1,4 @@
+
 // Horus Platform — Production Prisma schema
 // Multi-tenant by default. Every domain table carries tenantId.
 // RLS policies are applied via migrations under prisma/migrations/.
@@ -11,7 +12,7 @@ datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
   directUrl  = env("DIRECT_URL")
-  extensions = [pgcrypto, pg_trgm]
+  extensions = [pgcrypto, vector(map: "vector"), pg_trgm]
 }
 
 // =============================================================================
@@ -48,6 +49,9 @@ model Tenant {
   members        TenantMember[]
   apiKeys        ApiKey[]
   documents      Document[]
+  chunks         Chunk[]
+  entities       Entity[]
+  relationships  Relationship[]
   chatSessions   ChatSession[]
   prompts        Prompt[]
   usageRecords   UsageRecord[]
@@ -55,6 +59,7 @@ model Tenant {
   alerts         Alert[]
   webhooks       Webhook[]
   enabledModules TenantModule[]
+  connections    Connection[]
 
   @@index([slug])
   @@index([customDomain])
@@ -142,24 +147,107 @@ model Document {
   status       DocStatus @default(PENDING)
   pageCount    Int?
   chunksCount  Int       @default(0)
+  searchIndex  String? // Azure AI Search index name
   metadata     Json      @default("{}")
   errorMessage String?
   uploadedById String    @db.Uuid
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
-  indexedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  indexedAt    DateTime?
 
-  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  chunks   Chunk[]
+  entities DocumentEntity[]
 
   @@index([tenantId, status])
   @@index([tenantId, category])
   @@map("documents")
 }
 
-// Chunks, embeddings, entities and relationships are deliberately NOT modelled
-// in Postgres. They live in Azure AI Search (chunks + vectors) and Cosmos
-// Gremlin (graph). Postgres holds only the document row; everything derived
-// is queried through the orchestrator.
+model Chunk {
+  id          String                       @id @default(uuid()) @db.Uuid
+  tenantId    String                       @db.Uuid
+  documentId  String                       @db.Uuid
+  ordinal     Int
+  text        String
+  searchId    String? // ID in Azure AI Search
+  embedding   Unsupported("vector(3072)")?
+  pageNumber  Int?
+  charStart   Int?
+  charEnd     Int?
+  metadata    Json                         @default("{}")
+  createdAt   DateTime                     @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, ordinal])
+  @@index([tenantId, documentId])
+  @@index([searchId])
+  @@map("chunks")
+}
+
+// =============================================================================
+// Knowledge Graph (mirror of Cosmos/Neo4j; canonical IDs live here)
+// =============================================================================
+
+model Entity {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  name        String
+  type        String // organization, program, policy, funding, skill, occupation, etc.
+  graphNodeId String? // Cosmos vertex / Neo4j node ID
+  aliases     String[] @default([])
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant     Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents  DocumentEntity[]
+  outgoing   Relationship[]   @relation("FromEntity")
+  incoming   Relationship[]   @relation("ToEntity")
+
+  @@unique([tenantId, type, name])
+  @@index([tenantId, type])
+  @@index([graphNodeId])
+  @@map("entities")
+}
+
+model Relationship {
+  id           String   @id @default(uuid()) @db.Uuid
+  tenantId     String   @db.Uuid
+  fromEntityId String   @db.Uuid
+  toEntityId   String   @db.Uuid
+  type         String // funds, employs, requires, located_in, contradicts, supports...
+  confidence   Float    @default(1.0)
+  metadata     Json     @default("{}")
+  createdAt    DateTime @default(now())
+
+  tenant     Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  fromEntity Entity @relation("FromEntity", fields: [fromEntityId], references: [id], onDelete: Cascade)
+  toEntity   Entity @relation("ToEntity", fields: [toEntityId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, fromEntityId, toEntityId, type])
+  @@index([tenantId, type])
+  @@map("relationships")
+}
+
+model DocumentEntity {
+  id         String   @id @default(uuid()) @db.Uuid
+  tenantId   String   @db.Uuid
+  documentId String   @db.Uuid
+  entityId   String   @db.Uuid
+  mentions   Int      @default(1)
+  pages      Int[]    @default([])
+  createdAt  DateTime @default(now())
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  entity   Entity   @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId, entityId])
+  @@index([tenantId])
+  @@map("document_entities")
+}
 
 // =============================================================================
 // Chat / RAG sessions
@@ -305,6 +393,50 @@ model Webhook {
 
   @@index([tenantId])
   @@map("webhooks")
+}
+
+// =============================================================================
+// Connections (tenant integrations: MCP tool servers, external APIs, ...)
+// =============================================================================
+
+enum ConnectionKind {
+  MCP // Model Context Protocol tool server — Horus is the client
+  API // generic HTTP integration (calendar, booking, CRM...)
+}
+
+enum ConnectionStatus {
+  CONNECTED
+  ERROR
+  DISABLED
+}
+
+model Connection {
+  id       String         @id @default(uuid()) @db.Uuid
+  tenantId String         @db.Uuid
+  kind     ConnectionKind
+  // Namespace slug for tool names (mcp__<slug>__<tool>): [a-z0-9_].
+  slug     String
+  name     String
+  endpoint String
+  // none | bearer — the secret itself lives in secretRef, never here.
+  authType String  @default("none")
+  // Env var name holding the bearer secret (avoids secrets-at-rest in Postgres).
+  secretRef String?
+  config    Json             @default("{}")
+  status    ConnectionStatus @default(CONNECTED)
+  // Discovered tool cache: [{ name, description }].
+  tools         Json      @default("[]")
+  toolCount     Int       @default(0)
+  lastCheckedAt DateTime?
+  lastError     String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, kind])
+  @@map("connections")
 }
 
 // =============================================================================

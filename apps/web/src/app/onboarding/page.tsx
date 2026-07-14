@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/supabase/server';
+import { isPlatformAdmin } from '@/lib/tenant-context';
 import { prisma } from '@horus/db';
 
 function slugify(input: string): string {
@@ -32,6 +33,11 @@ export default async function OnboardingPage() {
     include: { tenant: true },
   });
   if (existing) redirect(`/t/${existing.tenant.slug}`);
+
+  // Platform operators don't get a personal workspace. Send them to the
+  // console — opening a seeded tenant (e.g. CareerCraft) claims OWNER there
+  // (see requireTenantMember), so they never mint a stray tenant here.
+  if (isPlatformAdmin(user.email)) redirect('/admin/tenants');
 
   // Pull intent from auth metadata (set in /signup form).
   const meta = (user.user_metadata ?? {}) as {

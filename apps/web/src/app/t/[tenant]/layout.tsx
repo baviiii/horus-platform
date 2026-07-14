@@ -1,5 +1,6 @@
 import { AppShell, type NavGroup } from '@/components/app/shell';
-import { mockTenant, mockUser } from '@/lib/mock-data';
+import { prisma } from '@horus/db';
+import { requireTenantMember } from '@/lib/tenant-context';
 
 export default async function TenantLayout({
   children,
@@ -9,7 +10,16 @@ export default async function TenantLayout({
   params: Promise<{ tenant: string }>;
 }) {
   const { tenant: slug } = await params;
-  const tenantName = mockTenant.branding?.name ?? mockTenant.name;
+  const { tenant, user } = await requireTenantMember(slug);
+
+  const branding = ((tenant.config as Record<string, unknown>)?.branding ?? {}) as {
+    name?: string;
+  };
+  const tenantName = branding.name || tenant.name;
+
+  const openAlerts = await prisma.alert.count({
+    where: { tenantId: tenant.id, status: 'OPEN' },
+  });
 
   const groups: NavGroup[] = [
     {
@@ -18,7 +28,13 @@ export default async function TenantLayout({
         { href: `/t/${slug}/chat`, label: 'Chat', icon: <IconChat /> },
         { href: `/t/${slug}/documents`, label: 'Documents', icon: <IconDoc /> },
         { href: `/t/${slug}/graph`, label: 'Knowledge graph', icon: <IconGraph /> },
-        { href: `/t/${slug}/alerts`, label: 'Alerts', icon: <IconBell />, badge: '3' },
+        { href: `/t/${slug}/connections`, label: 'Connections', icon: <IconPlug /> },
+        {
+          href: `/t/${slug}/alerts`,
+          label: 'Alerts',
+          icon: <IconBell />,
+          ...(openAlerts > 0 && { badge: String(openAlerts) }),
+        },
       ],
     },
     {
@@ -34,12 +50,12 @@ export default async function TenantLayout({
 
   return (
     <AppShell
-      brand={{ name: tenantName, href: `/t/${slug}`, tag: mockTenant.plan }}
+      brand={{ name: tenantName, href: `/t/${slug}`, tag: tenant.plan }}
       groups={groups}
       user={{
-        name: mockUser.displayName,
-        email: mockUser.email,
-        initials: mockUser.initials,
+        name: user.displayName,
+        email: user.email,
+        initials: user.initials,
       }}
       context={
         <nav className="text-ink-faded flex items-center gap-1.5 text-[13px]">
@@ -106,6 +122,19 @@ function IconGraph() {
       <circle cx="12" cy="4" r="1.5" stroke="currentColor" strokeWidth="1.4" />
       <circle cx="8" cy="12" r="1.5" stroke="currentColor" strokeWidth="1.4" />
       <path d="M5.2 5.2l2 5.2M11 5.2l-2 5.2M5.5 4h5" stroke="currentColor" strokeWidth="1.4" />
+    </Icon>
+  );
+}
+function IconPlug() {
+  return (
+    <Icon>
+      <path
+        d="M5.5 2v3M10.5 2v3M4 5h8v3a4 4 0 01-8 0V5zM8 12v2.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </Icon>
   );
 }

@@ -154,6 +154,7 @@ export function Section({
 const navLinks = [
   { href: '/#product', label: 'Product' },
   { href: '/#capabilities', label: 'Capabilities' },
+  { href: '/playground', label: 'Playground' },
   { href: '/#pricing', label: 'Pricing' },
   { href: '/docs', label: 'Docs' },
 ];

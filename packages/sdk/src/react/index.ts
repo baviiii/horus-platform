@@ -1,4 +1,4 @@
-import { createTRPCReact } from '@trpc/react-query';
+import { createTRPCReact, type CreateTRPCReact } from '@trpc/react-query';
 import type { AppRouter } from '@horus/api';
 
 /**
@@ -12,6 +12,7 @@ import type { AppRouter } from '@horus/api';
  *
  * Pair with a `<HorusProvider>` that wires up the trpc + react-query providers.
  */
-export const horusReact = createTRPCReact<AppRouter>();
+// Explicit annotation keeps the emitted type portable under pnpm (TS2742).
+export const horusReact: CreateTRPCReact<AppRouter, unknown> = createTRPCReact<AppRouter>();
 
 export type { AppRouter };

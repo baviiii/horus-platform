@@ -1,7 +1,9 @@
 import { AppShell, type NavGroup } from '@/components/app/shell';
-import { mockUser } from '@/lib/mock-data';
+import { requirePlatformAdmin } from '@/lib/tenant-context';
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+  const user = await requirePlatformAdmin();
+
   const groups: NavGroup[] = [
     {
       items: [
@@ -18,9 +20,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       brand={{ name: 'Horus', href: '/admin', tag: 'Platform admin' }}
       groups={groups}
       user={{
-        name: mockUser.displayName,
-        email: mockUser.email,
-        initials: mockUser.initials,
+        name: user.displayName,
+        email: user.email,
+        initials: user.initials,
       }}
       context={
         <nav className="text-ink-faded flex items-center gap-1.5 text-[13px]">

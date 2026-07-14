@@ -12,7 +12,12 @@
     "./graph": "./src/graph/index.ts",
     "./documents": "./src/documents/index.ts",
     "./entities": "./src/entities/index.ts",
-    "./alerts": "./src/alerts/index.ts"
+    "./alerts": "./src/alerts/index.ts",
+    "./inference": "./src/inference/index.ts",
+    "./knowledge": "./src/knowledge/index.ts",
+    "./agent": "./src/agent/index.ts",
+    "./safety": "./src/safety/index.ts",
+    "./mcp": "./src/mcp/index.ts"
   },
   "scripts": {
     "build": "tsc -b",
@@ -21,13 +26,20 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@horus/db": "workspace:*",
+    "@azure/ai-agents": "^1.1.0",
+    "@azure/identity": "^4.13.1",
     "@azure/search-documents": "^12.1.0",
     "@azure/storage-blob": "^12.26.0",
+    "@horus/db": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "cheerio": "^1.0.0",
+    "html-to-text": "^9.0.5",
     "openai": "^4.73.1",
+    "unpdf": "^0.12.1",
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@types/html-to-text": "^9.0.4",
     "@types/node": "^20.17.6",
     "typescript": "^5.6.3"
   }

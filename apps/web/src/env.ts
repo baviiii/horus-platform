@@ -17,10 +17,22 @@ const ServerEnvSchema = z.object({
   AZURE_OPENAI_API_VERSION: z.string().optional(),
   AZURE_OPENAI_COMPLETION_MODEL: z.string().optional(),
   AZURE_OPENAI_EMBEDDING_MODEL: z.string().optional(),
+  // Capability tiers for /infer. Both fall back to the completion deployment.
+  AZURE_OPENAI_FAST_MODEL: z.string().optional(),
+  AZURE_OPENAI_DEEP_MODEL: z.string().optional(),
+
+  // Foundry project (Agent Service — Entra auth via DefaultAzureCredential).
+  AZURE_AI_PROJECT_ENDPOINT: z.string().url().optional(),
+  AZURE_BING_CONNECTION_ID: z.string().min(1).optional(),
+  // Realtime full-duplex voice + Content Safety (same account key as OpenAI).
+  AZURE_OPENAI_REALTIME_DEPLOYMENT: z.string().min(1).optional(),
+  AZURE_CONTENT_SAFETY_ENDPOINT: z.string().url().optional(),
 
   AZURE_SEARCH_ENDPOINT: z.string().url().optional(),
   AZURE_SEARCH_API_KEY: z.string().min(1).optional(),
   AZURE_SEARCH_INDEX_NAME: z.string().min(1).optional(),
+  // Open-access playground: session-scoped knowledge index.
+  AZURE_SEARCH_PLAYGROUND_INDEX: z.string().min(1).optional(),
 
   AZURE_STORAGE_CONNECTION_STRING: z.string().min(1).optional(),
   AZURE_COSMOS_ENDPOINT: z.string().url().optional(),
@@ -40,6 +52,8 @@ const ServerEnvSchema = z.object({
   AXIOM_TOKEN: z.string().min(1).optional(),
 
   HORUS_APEX_DOMAINS: z.string().default('localhost'),
+  /** Comma-separated emails allowed into /admin and auto-claiming seeded tenants. */
+  HORUS_ADMIN_EMAILS: z.string().optional(),
 });
 
 const ClientEnvSchema = z.object({

@@ -15,7 +15,8 @@
     "build": "tsc -b",
     "clean": "rm -rf dist .turbo",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "create-dev-key": "tsx scripts/create-dev-key.ts"
   },
   "dependencies": {
     "@horus/db": "workspace:*",
@@ -26,6 +27,7 @@
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
     "@types/node": "^20.17.6",
+    "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }
