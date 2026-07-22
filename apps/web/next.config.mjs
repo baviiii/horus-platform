@@ -16,6 +16,13 @@ const nextConfig = {
     '@horus/tenancy',
   ],
   serverExternalPackages: ['@prisma/client', 'bcryptjs'],
+  // Vercel deploys from the monorepo root: make sure the pnpm-hoisted Prisma
+  // query engine (.so.node) is traced into every serverless bundle — without
+  // this the lambda boots but Prisma dies with "could not locate Query Engine
+  // for runtime rhel-openssl-3.0.x".
+  outputFileTracingIncludes: {
+    '/**': ['../../node_modules/.pnpm/@prisma+client*/node_modules/.prisma/client/**'],
+  },
   // Workspace packages ship TS source with ESM `.js` specifiers; teach
   // webpack (prod builds) to resolve them the way tsc/turbopack already do.
   webpack: (config) => {

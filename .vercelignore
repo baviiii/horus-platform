@@ -1,0 +1,8 @@
+# Not part of the Next.js deployment — keep uploads small (Vercel hard-fails on >100MB files).
+infrastructure
+seed-corpus
+workers
+apps/web/.next
+**/.terraform
+**/node_modules
+*.zip
