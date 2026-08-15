@@ -13,6 +13,7 @@ import { moderateTexts } from '../safety/content-safety.js';
 import {
   ensureKnowledgeIndex,
   upsertChunks,
+  type ChunkMeta,
   type KnowledgeChunkDoc,
   type KnowledgeSource,
 } from './store.js';
@@ -30,6 +31,8 @@ interface ScopeParams {
   indexName: string;
   tenantId: string;
   sessionId: string;
+  /** Corpus facets stamped on every chunk (category/year/tags). */
+  meta?: ChunkMeta;
 }
 
 interface PendingChunk {
@@ -68,6 +71,9 @@ async function embedAndIndex(
         contentVector: vectors[j]!,
         chunkIx: chunk.chunkIx,
         createdAt: now,
+        ...(scope.meta?.category && { category: scope.meta.category }),
+        ...(scope.meta?.year && { year: scope.meta.year }),
+        ...(scope.meta?.tags && scope.meta.tags.length > 0 && { tags: scope.meta.tags }),
       });
     });
     emit({

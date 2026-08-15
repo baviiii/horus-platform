@@ -26,6 +26,7 @@ import {
   buildAgentTools,
   CitationRegistry,
   executeFetchPage,
+  executeGraphLookup,
   executeSearchKnowledge,
   type AgentCitation,
   type ToolScope,
@@ -67,6 +68,7 @@ Rules:
 - Ground every claim in retrieved passages and cite them inline as [n], using the numbers from tool results.
 - If the knowledge base has nothing relevant, say so plainly — then use web search if it is available, or suggest what the user could connect. Never invent an answer.
 - Use fetch_page only when the user shares a URL mid-conversation or explicitly asks about a live page.
+- For questions about how things CONNECT — which programs fund a sector, what skills an occupation needs, what an organization delivers — call graph_lookup on the key entity, then search_knowledge for supporting passages. Cite both.
 - Answers may be spoken aloud by a voice interface: be concise and conversational. Prefer a short direct answer followed by brief supporting detail.`;
 
 async function describeSources(scope: ToolScope): Promise<string> {
@@ -303,6 +305,10 @@ export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
           emit({ kind: 'tool', name: 'fetch_page', status: 'start', detail: parsed.url });
           result = await executeFetchPage(registry, parsed.url);
           emit({ kind: 'tool', name: 'fetch_page', status: 'end' });
+        } else if (name === 'graph_lookup' && typeof parsed.entity === 'string') {
+          emit({ kind: 'tool', name: 'graph_lookup', status: 'start', detail: parsed.entity });
+          result = await executeGraphLookup(scope, registry, parsed.entity);
+          emit({ kind: 'tool', name: 'graph_lookup', status: 'end' });
         } else if (mcpTarget) {
           const display = `${mcpTarget.ref.label}:${mcpTarget.tool}`;
           emit({ kind: 'tool', name: display, status: 'start' });

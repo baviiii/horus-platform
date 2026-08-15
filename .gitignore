@@ -60,3 +60,6 @@ crash.*.log
 *.tfvars
 *.tfvars.json
 !*.tfvars.example
+
+.vercel
+.env*

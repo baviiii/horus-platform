@@ -4,6 +4,9 @@ import { getCurrentUser } from '@/lib/supabase/server';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+// Model-backed mutations (incidents.absorbTemplate / incidents.draft) run
+// long single-shot completions — give them the same headroom as agent chat.
+export const maxDuration = 120;
 
 async function handler(req: Request) {
   const user = await getCurrentUser();

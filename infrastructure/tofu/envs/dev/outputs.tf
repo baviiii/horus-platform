@@ -18,6 +18,11 @@ output "storage_primary_blob_endpoint" {
   value       = module.storage.primary_blob_endpoint
 }
 
+output "storage_account_resource_id" {
+  description = "ARM id of the storage account — AZURE_STORAGE_ACCOUNT_RESOURCE_ID, used by the AI Search data source for keyless (ResourceId=) blob access."
+  value       = module.storage.storage_account_id
+}
+
 output "storage_container_names" {
   description = "Containers created inside the storage account."
   value       = module.storage.container_names
@@ -88,4 +93,52 @@ output "search_primary_key" {
 output "search_sku" {
   description = "Search SKU (free tier ⇒ no semantic reranker)."
   value       = module.search.sku
+}
+
+output "search_principal_id" {
+  description = "Search service managed identity — holds blob read + Foundry access for keyless indexer runs."
+  value       = module.search.principal_id
+}
+
+# --- Australian document plane ----------------------------------------------
+
+output "au_document_location" {
+  description = "Region carrying document content (Content Understanding + document embeddings)."
+  value       = var.deploy_au_document_plane ? var.au_document_location : null
+}
+
+output "au_foundry_account_name" {
+  description = "Foundry account backing Content Understanding — AZURE_AU_FOUNDRY_ACCOUNT."
+  value       = var.deploy_au_document_plane ? module.foundry_au[0].account_name : null
+}
+
+output "au_foundry_account_id" {
+  description = "ARM id of the AU Foundry account — the skillset's billing resource."
+  value       = var.deploy_au_document_plane ? module.foundry_au[0].account_id : null
+}
+
+output "au_openai_endpoint" {
+  description = "AU Azure OpenAI endpoint — AZURE_AU_OPENAI_ENDPOINT (document embeddings)."
+  value       = var.deploy_au_document_plane ? module.foundry_au[0].openai_endpoint : null
+}
+
+output "au_cognitive_endpoint" {
+  description = "AU AI Services endpoint (*.cognitiveservices.azure.com) — AZURE_AU_COGNITIVE_ENDPOINT. The skillset's subdomainUrl must be this, not the OpenAI hostname; the API validates it as an AI Services resource."
+  value       = var.deploy_au_document_plane ? module.foundry_au[0].account_endpoint : null
+}
+
+output "au_openai_primary_access_key" {
+  description = "AU Foundry account key — AZURE_AU_OPENAI_API_KEY."
+  value       = var.deploy_au_document_plane ? module.foundry_au[0].primary_access_key : null
+  sensitive   = true
+}
+
+output "au_embedding_deployment" {
+  description = "AU embedding deployment used by the indexer's vectorizer."
+  value       = var.deploy_au_document_plane ? module.foundry_au[0].embedding_deployment_name : null
+}
+
+output "corpus_container_name" {
+  description = "Blob container the AI Search corpus indexer crawls."
+  value       = "corpus"
 }

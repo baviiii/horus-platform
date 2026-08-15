@@ -31,6 +31,9 @@ const ServerEnvSchema = z.object({
   AZURE_SEARCH_ENDPOINT: z.string().url().optional(),
   AZURE_SEARCH_API_KEY: z.string().min(1).optional(),
   AZURE_SEARCH_INDEX_NAME: z.string().min(1).optional(),
+  // Vector width. Lowering it trades a little recall for ~linear storage
+  // savings; changing it requires dropping and rebuilding the index.
+  AZURE_SEARCH_VECTOR_DIMENSIONS: z.coerce.number().int().min(256).max(3072).optional(),
   // Open-access playground: session-scoped knowledge index.
   AZURE_SEARCH_PLAYGROUND_INDEX: z.string().min(1).optional(),
 

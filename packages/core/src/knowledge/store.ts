@@ -11,7 +11,17 @@
 import type { SearchClient, SearchIndex } from '@azure/search-documents';
 import { getSearchClient, getSearchIndexClient } from '../clients/azure-search.js';
 
-export const EMBEDDING_DIMENSIONS = 3072;
+/**
+ * Vector width for the knowledge index.
+ *
+ * 3072 is text-embedding-3-large's native size. Lowering it (e.g. 1024) is a
+ * Matryoshka truncation: index storage shrinks roughly linearly for a small
+ * recall cost — the lever to pull when Azure AI Search storage is the binding
+ * constraint. CHANGING THIS REQUIRES A FULL RE-INDEX: AI Search treats
+ * vectorSearchDimensions as immutable, so the index must be dropped and every
+ * chunk re-embedded. Never flip it casually on a populated index.
+ */
+export const EMBEDDING_DIMENSIONS = Number(process.env.AZURE_SEARCH_VECTOR_DIMENSIONS ?? 3072);
 
 export interface KnowledgeChunkDoc {
   /** `${sessionId}_${sourceId}_${chunkIx}` — AI-Search-key-safe, deterministic. */
@@ -27,6 +37,19 @@ export interface KnowledgeChunkDoc {
   contentVector: number[];
   chunkIx: number;
   createdAt: Date;
+  /** Corpus area tags (manifest-driven) — filterable facets for scoped retrieval. */
+  category?: string;
+  year?: number;
+  tags?: string[];
+  /** Set by the Content Understanding indexer; never written by this module. */
+  pageNumber?: number;
+}
+
+/** Optional metadata attached to every chunk of a source at ingest time. */
+export interface ChunkMeta {
+  category?: string;
+  year?: number;
+  tags?: string[];
 }
 
 export interface KnowledgeHit {
@@ -37,6 +60,12 @@ export interface KnowledgeHit {
   sourceType: 'url' | 'pdf';
   sourceId: string;
   chunkIx: number;
+  /**
+   * 1-based page the chunk starts on. Written by the Content Understanding
+   * pipeline from `locationMetadata/pageNumberFrom`; absent on chunks from the
+   * older synchronous ingest, which had no layout information to derive it.
+   */
+  pageNumber?: number;
 }
 
 export interface KnowledgeSource {
@@ -65,8 +94,14 @@ function buildIndexDefinition(name: string): SearchIndex {
       { name: 'sourceUrl', type: 'Edm.String', filterable: true },
       { name: 'title', type: 'Edm.String', searchable: true },
       { name: 'content', type: 'Edm.String', searchable: true },
+      // NOTE: attributes of already-deployed fields are immutable in AI Search —
+      // chunkIx stays exactly as first shipped (sortable, not filterable).
       { name: 'chunkIx', type: 'Edm.Int32', sortable: true },
       { name: 'createdAt', type: 'Edm.DateTimeOffset', filterable: true, sortable: true },
+      // Corpus facets — additive fields; pre-existing documents hold nulls.
+      { name: 'category', type: 'Edm.String', filterable: true, facetable: true },
+      { name: 'year', type: 'Edm.Int32', filterable: true, facetable: true },
+      { name: 'tags', type: 'Collection(Edm.String)', filterable: true, facetable: true },
       {
         name: 'contentVector',
         type: 'Collection(Edm.Single)',
@@ -83,17 +118,48 @@ function buildIndexDefinition(name: string): SearchIndex {
   };
 }
 
-// Idempotent, memoized per process — the app owns its index schema the same
-// way it owns Prisma migrations.
+// Idempotent, memoized per process.
 const ensured = new Map<string, Promise<void>>();
 
+/**
+ * Guarantee the index exists and is queryable — *not* that it matches
+ * `buildIndexDefinition` exactly.
+ *
+ * The distinction matters because this module no longer owns every index it
+ * reads. The corpus index (`AZURE_SEARCH_INDEX_NAME`) is created and owned by
+ * the AI Search indexer pipeline in `scripts/setup-search-pipeline.ts`, whose
+ * schema legitimately differs: index projections generate their own keys, so
+ * its `id` field carries `analyzer: 'keyword'`, and it has `parentId` /
+ * `pageNumber` / `region` fields this module never writes.
+ *
+ * AI Search treats existing field attributes as immutable, so pushing our
+ * definition over that index fails with `CannotChangeExistingField`. That used
+ * to reject the whole call and — because callers await this before serving —
+ * turned a rejected *schema upgrade* into a 500 on the user's chat request.
+ * An index that already exists is an index we can query, so we log and carry
+ * on. Only a genuine "it isn't there" failure is fatal.
+ */
 export function ensureKnowledgeIndex(indexName: string): Promise<void> {
   let pending = ensured.get(indexName);
   if (!pending) {
-    pending = getSearchIndexClient()
+    const indexClient = getSearchIndexClient();
+    pending = indexClient
       .createOrUpdateIndex(buildIndexDefinition(indexName))
       .then(() => undefined)
-      .catch((err) => {
+      .catch(async (err: unknown) => {
+        // Externally-owned or already-migrated index: usable as-is.
+        const exists = await indexClient
+          .getIndex(indexName)
+          .then(() => true)
+          .catch(() => false);
+        if (exists) {
+          console.warn(
+            `[knowledge] index "${indexName}" exists but rejected our schema ` +
+              `(${err instanceof Error ? err.message : String(err)}). ` +
+              `Continuing against the deployed schema.`,
+          );
+          return;
+        }
         ensured.delete(indexName); // allow retry on transient failure
         throw err;
       });
@@ -122,6 +188,32 @@ export interface SearchKnowledgeParams {
   query: string;
   vector: number[];
   top?: number;
+  /** Facet filters (manifest-driven fields). All optional, AND-combined. */
+  filters?: {
+    category?: string;
+    year?: number;
+    tags?: string[];
+    sourceIds?: string[];
+  };
+}
+
+function facetFilter(base: string, filters: SearchKnowledgeParams['filters']): string {
+  if (!filters) return base;
+  const parts = [base];
+  if (filters.category) parts.push(`category eq '${escapeOData(filters.category)}'`);
+  // year and tags arrive from blob metadata, which is string-only — the
+  // indexer cannot coerce them, so both are stored as strings.
+  if (filters.year) parts.push(`year eq '${Math.floor(filters.year)}'`);
+  for (const tag of filters.tags ?? []) {
+    // tags is a comma-joined string; full-text match is the exact-enough
+    // equivalent of a collection membership test for slug-style tags.
+    parts.push(`search.ismatch('${escapeOData(tag)}', 'tags')`);
+  }
+  if (filters.sourceIds && filters.sourceIds.length > 0) {
+    const ors = filters.sourceIds.map((id) => `sourceId eq '${escapeOData(id)}'`).join(' or ');
+    parts.push(`(${ors})`);
+  }
+  return parts.join(' and ');
 }
 
 /** Hybrid (keyword + vector) search scoped to one tenant + session. */
@@ -129,9 +221,12 @@ export async function searchKnowledge(params: SearchKnowledgeParams): Promise<Kn
   const { indexName, tenantId, sessionId, query, vector, top = 8 } = params;
 
   const results = await client(indexName).search(query, {
-    filter: scopeFilter(tenantId, sessionId),
+    filter: facetFilter(scopeFilter(tenantId, sessionId), params.filters),
     top,
-    select: ['title', 'content', 'sourceUrl', 'sourceType', 'sourceId', 'chunkIx'],
+    // pageNumber is populated by the indexer pipeline only. Selecting a field
+    // that holds nulls for older chunks is safe; omitting it loses the page
+    // citation on every chunk that does have one.
+    select: ['title', 'content', 'sourceUrl', 'sourceType', 'sourceId', 'chunkIx', 'pageNumber'],
     vectorSearchOptions: {
       queries: [
         { kind: 'vector', vector, fields: ['contentVector'], kNearestNeighborsCount: top * 2 },
@@ -150,9 +245,53 @@ export async function searchKnowledge(params: SearchKnowledgeParams): Promise<Kn
       sourceType: doc.sourceType,
       sourceId: doc.sourceId,
       chunkIx: doc.chunkIx,
+      ...(typeof doc.pageNumber === 'number' && { pageNumber: doc.pageNumber }),
     });
   }
   return hits;
+}
+
+export interface SourceChunk {
+  id: string;
+  chunkIx: number;
+  title: string;
+  content: string;
+}
+
+/**
+ * All chunks of one source, in order — the graph extractor's feed. Paged
+ * because sources can exceed the 1000-per-search ceiling (agency statements).
+ */
+export async function fetchSourceChunks(
+  indexName: string,
+  tenantId: string,
+  sessionId: string,
+  sourceId: string,
+  maxChunks = 2000,
+): Promise<SourceChunk[]> {
+  const chunks: SourceChunk[] = [];
+  const baseFilter = `${scopeFilter(tenantId, sessionId)} and sourceId eq '${escapeOData(sourceId)}'`;
+
+  // chunkIx is sortable but not filterable (immutable legacy field attrs), so
+  // page with skip/top over a stable sort instead of a range filter.
+  for (let skip = 0; chunks.length < maxChunks; skip += 1000) {
+    const results = await client(indexName).search('*', {
+      filter: baseFilter,
+      top: 1000,
+      skip,
+      select: ['id', 'chunkIx', 'title', 'content'],
+      orderBy: ['chunkIx asc'],
+    });
+    let got = 0;
+    for await (const result of results.results) {
+      const doc = result.document;
+      chunks.push({ id: doc.id, chunkIx: doc.chunkIx, title: doc.title, content: doc.content });
+      got++;
+      if (chunks.length >= maxChunks) break;
+    }
+    if (got < 1000) break;
+  }
+  return chunks;
 }
 
 /** Count chunks currently indexed for a session (quota enforcement). */

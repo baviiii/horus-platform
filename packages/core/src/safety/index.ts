@@ -1,5 +1,6 @@
 export {
   assertTextSafe,
+  moderateImage,
   moderateText,
   moderateTexts,
   type ModerationVerdict,

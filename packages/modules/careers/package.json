@@ -1,0 +1,27 @@
+{
+  "name": "@horus/module-careers",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Careers vertical module — occupation profiles, pathways, and skill gaps composed over the Horus knowledge graph.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "clean": "rm -rf dist .turbo",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@horus/core": "workspace:*",
+    "@horus/db": "workspace:*",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.6",
+    "typescript": "^5.6.3"
+  }
+}

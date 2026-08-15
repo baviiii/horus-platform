@@ -10,3 +10,4 @@ export * as knowledge from './knowledge/index.js';
 export * as agent from './agent/index.js';
 export * as safety from './safety/index.js';
 export * as mcp from './mcp/index.js';
+export * as incidents from './incidents/index.js';

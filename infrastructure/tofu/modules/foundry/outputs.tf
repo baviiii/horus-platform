@@ -50,8 +50,13 @@ output "embedding_deployment_name" {
 }
 
 output "realtime_deployment_name" {
-  description = "Realtime voice deployment — AZURE_OPENAI_REALTIME_DEPLOYMENT."
-  value       = azapi_resource.realtime.name
+  description = "Realtime voice deployment — AZURE_OPENAI_REALTIME_DEPLOYMENT (null when deploy_realtime is false)."
+  value       = var.deploy_realtime ? azapi_resource.realtime[0].name : null
+}
+
+output "principal_id" {
+  description = "System-assigned identity of the Foundry account (for RBAC grants)."
+  value       = azurerm_cognitive_account.main.identity[0].principal_id
 }
 
 output "bing_connection_id" {
