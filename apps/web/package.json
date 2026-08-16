@@ -12,7 +12,7 @@
     "clean": "rm -rf .next .turbo node_modules/.cache"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.9.1",
+    "@hookform/resolvers": "^5.4.0",
     "@horus/api": "workspace:*",
     "@horus/auth": "workspace:*",
     "@horus/core": "workspace:*",
