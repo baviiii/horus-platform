@@ -23,12 +23,12 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@trpc/client": "^11.0.0-rc.660",
+    "@trpc/client": "^11.18.0",
     "superjson": "^2.2.1"
   },
   "devDependencies": {
     "@horus/api": "workspace:*",
-    "@trpc/server": "^11.0.0-rc.660",
+    "@trpc/server": "^11.18.0",
     "@types/node": "^20.17.6",
     "typescript": "^5.6.3"
   },

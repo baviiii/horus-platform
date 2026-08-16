@@ -22,7 +22,7 @@
     "@horus/core": "workspace:*",
     "@horus/db": "workspace:*",
     "@horus/tenancy": "workspace:*",
-    "@trpc/server": "^11.0.0-rc.660",
+    "@trpc/server": "^11.18.0",
     "superjson": "^2.2.1",
     "zod": "^3.23.8",
     "@horus/module-careers": "workspace:*"
