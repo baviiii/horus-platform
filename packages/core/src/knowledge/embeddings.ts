@@ -4,8 +4,11 @@
  * batching (API max is 2048 inputs, but small batches keep request sizes sane).
  */
 import { getOpenAIClient, MODELS } from '../clients/openai.js';
+import { EMBEDDING_DIMENSIONS } from './store.js';
 
 const BATCH_SIZE = 16;
+/** text-embedding-3-large's native width; anything less is a Matryoshka truncation. */
+const NATIVE_DIMENSIONS = 3072;
 
 /** Embed many texts, preserving input order. */
 export async function embedTexts(texts: string[]): Promise<number[][]> {
@@ -13,11 +16,18 @@ export async function embedTexts(texts: string[]): Promise<number[][]> {
   const client = getOpenAIClient();
   const out: number[][] = new Array(texts.length);
 
+  // text-embedding-3-* supports Matryoshka truncation: asking for fewer
+  // dimensions shrinks index storage ~linearly for a small recall cost.
+  // Must match the index's vectorSearchDimensions exactly.
+  const dimensions =
+    EMBEDDING_DIMENSIONS !== NATIVE_DIMENSIONS ? { dimensions: EMBEDDING_DIMENSIONS } : {};
+
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE);
     const res = await client.embeddings.create({
       model: MODELS.embedding,
       input: batch,
+      ...dimensions,
     });
     for (const item of res.data) out[i + item.index] = item.embedding;
   }

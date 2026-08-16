@@ -24,7 +24,8 @@
     "@horus/tenancy": "workspace:*",
     "@trpc/server": "^11.0.0-rc.660",
     "superjson": "^2.2.1",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "@horus/module-careers": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.17.6",

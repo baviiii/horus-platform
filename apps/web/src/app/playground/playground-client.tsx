@@ -528,6 +528,12 @@ export function PlaygroundClient() {
               Reset
             </button>
             <Link
+              href="/playground/incidents"
+              className="border-accent/30 text-accent hover:bg-accent/10 hidden h-8 items-center gap-1.5 rounded-full border px-3 text-[12px] font-medium transition-colors sm:inline-flex"
+            >
+              Incident reports · new
+            </Link>
+            <Link
               href="/playground/infer"
               className="mono text-ink-mute hover:text-ink hidden h-8 items-center rounded-full px-3 text-[11px] tracking-wide transition-colors sm:inline-flex"
             >

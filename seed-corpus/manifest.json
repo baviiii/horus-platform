@@ -1,0 +1,1036 @@
+{
+  "version": "2026-07-29",
+  "tenant": "careercraft",
+  "notes": "Single source of truth for the CareerCraft corpus. Every document carries category/region/year/tags (flow into the search index as filterable fields) and a graph flag (whether the entity extractor runs over it). fetch-corpus.ts downloads entries that have a url and no local file yet; ingest-corpus.ts ingests everything not marked skip.",
+  "categories": [
+    "budget",
+    "budget-federal",
+    "jobs-skills",
+    "industry",
+    "education",
+    "workforce",
+    "career-guidance",
+    "inclusion",
+    "environment",
+    "misc"
+  ],
+  "documents": [
+    {
+      "id": "sa-budget-2627-overview",
+      "file": "2026-27/2026-27-Budget-Overview.pdf",
+      "url": "https://treasury.sa.gov.au/__data/assets/pdf_file/0004/1419034/26-27-State-Budget-Overview.pdf",
+      "title": "SA State Budget 2026-27 — Budget Overview (BP1)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["state-budget", "2026-27", "overview"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2627-speech",
+      "file": "2026-27/2026-27-Budget-Speech.pdf",
+      "url": "https://treasury.sa.gov.au/__data/assets/pdf_file/0005/1419035/2026-27-Budget-Speech.pdf",
+      "title": "SA State Budget 2026-27 — Budget Speech (BP2)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["state-budget", "2026-27", "speech"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2627-statement",
+      "file": "2026-27/2026-27-Budget-Statement.pdf",
+      "url": "https://treasury.sa.gov.au/__data/assets/pdf_file/0006/1419036/2026-27-Budget-Statement.pdf",
+      "title": "SA State Budget 2026-27 — Budget Statement (BP3)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["state-budget", "2026-27", "fiscal-strategy"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2627-measures",
+      "file": "2026-27/2026-27-Budget-Measures-Statement.pdf",
+      "url": "https://treasury.sa.gov.au/__data/assets/pdf_file/0018/1419030/2026-27-Budget-Measures-Statement.pdf",
+      "title": "SA State Budget 2026-27 — Budget Measures Statement (BP5)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["state-budget", "2026-27", "measures", "programs", "funding"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2627-agency-v1",
+      "file": "2026-27/2026-27-Agency-Statements-Volume-1.pdf",
+      "url": "https://treasury.sa.gov.au/__data/assets/pdf_file/0019/1419031/2026-27-Agency-Statements-Volume-1.pdf",
+      "title": "SA State Budget 2026-27 — Agency Statements Volume 1 (BP4)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["state-budget", "2026-27", "agency-statements", "funding"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2627-agency-v2",
+      "file": "2026-27/2026-27-Agency-Statements-Volume-2.pdf",
+      "url": "https://treasury.sa.gov.au/__data/assets/pdf_file/0020/1419032/2026-27-Agency-Statements-Volume-2.pdf",
+      "title": "SA State Budget 2026-27 — Agency Statements Volume 2 (BP4)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["state-budget", "2026-27", "agency-statements", "funding"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2627-agency-v3",
+      "file": "2026-27/2026-27-Agency-Statements-Volume-3.pdf",
+      "url": "https://treasury.sa.gov.au/__data/assets/pdf_file/0003/1419033/2026-27-Agency-Statements-Volume-3.pdf",
+      "title": "SA State Budget 2026-27 — Agency Statements Volume 3 (BP4)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["state-budget", "2026-27", "agency-statements", "funding"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2627-agency-v4",
+      "file": "2026-27/2026-27-Agency-Statements-Volume-4.pdf",
+      "url": "https://treasury.sa.gov.au/__data/assets/pdf_file/0008/1419029/2026-27-Agency-Statements-Volume-4.pdf",
+      "title": "SA State Budget 2026-27 — Agency Statements Volume 4 (BP4)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["state-budget", "2026-27", "agency-statements", "funding"],
+      "graph": true
+    },
+    {
+      "id": "fed-budget-2627-overview",
+      "file": "2026-27/federal-budget-overview-2026-27.pdf",
+      "url": "https://budget.gov.au/content/overview/download/budget-overview-2026-27.pdf",
+      "title": "Australian Federal Budget 2026-27 — Budget Overview",
+      "category": "budget-federal",
+      "region": "AU",
+      "year": 2026,
+      "tags": ["federal-budget", "2026-27", "overview"],
+      "graph": true
+    },
+    {
+      "id": "fed-pbs-2627-dewr",
+      "file": "2026-27/dewr-portfolio-budget-statements-2026-27.pdf",
+      "url": "https://www.dewr.gov.au/download/17602/employment-and-workplace-relations-2026-27-portfolio-budget-statements/42704/document/pdf",
+      "title": "Employment and Workplace Relations Portfolio Budget Statements 2026-27",
+      "category": "budget-federal",
+      "region": "AU",
+      "year": 2026,
+      "tags": ["federal-budget", "2026-27", "portfolio-budget-statements", "employment", "skills"],
+      "graph": true
+    },
+    {
+      "id": "fed-pbs-2627-education",
+      "file": "2026-27/education-portfolio-budget-statements-2026-27.pdf",
+      "url": "https://www.education.gov.au/download/20342/2026-27-education-portfolio-budget-statements/44709/2026-27-education-portfolio-budget-statements/pdf",
+      "title": "Education Portfolio Budget Statements 2026-27",
+      "category": "budget-federal",
+      "region": "AU",
+      "year": 2026,
+      "tags": ["federal-budget", "2026-27", "portfolio-budget-statements", "education"],
+      "graph": true
+    },
+    {
+      "id": "australian-jobs-2026",
+      "file": "2026-27/Australian-Jobs-2026.pdf",
+      "url": "https://cica.org.au/wp-content/uploads/Australian-Jobs-2026.pdf",
+      "sourcePage": "https://www.jobsandskills.gov.au/publications/australian-jobs-2026",
+      "title": "Australian Jobs 2026 (Jobs and Skills Australia)",
+      "category": "jobs-skills",
+      "region": "AU",
+      "year": 2026,
+      "tags": ["labour-market", "occupations", "industries", "pathways"],
+      "graph": true
+    },
+
+    {
+      "id": "sa-budget-2526-overview",
+      "file": "2025-26-Budget-Overview.pdf",
+      "title": "SA State Budget 2025-26 — Budget Overview (BP1)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "2025-26", "overview"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2526-statement",
+      "file": "2025-26-Budget-Statement.pdf",
+      "title": "SA State Budget 2025-26 — Budget Statement (BP3)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "2025-26", "fiscal-strategy"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2526-measures",
+      "file": "2025-26-Budget-Measures-Statement.pdf",
+      "title": "SA State Budget 2025-26 — Budget Measures Statement (BP5)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "2025-26", "measures", "programs", "funding"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2526-agency-v1",
+      "file": "2025-26-Agency-Statements-Volume-1.pdf",
+      "title": "SA State Budget 2025-26 — Agency Statements Volume 1 (BP4)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "2025-26", "agency-statements", "funding"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2526-agency-v2",
+      "file": "2025-26-Agency-Statements-Volume-2.pdf",
+      "title": "SA State Budget 2025-26 — Agency Statements Volume 2 (BP4)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "2025-26", "agency-statements", "funding"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2526-agency-v3",
+      "file": "2025-26-Agency-Statements-Volume-3.pdf",
+      "title": "SA State Budget 2025-26 — Agency Statements Volume 3 (BP4)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "2025-26", "agency-statements", "funding"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2526-agency-v4",
+      "file": "2025-26-Agency-Statements-Volume-4.pdf",
+      "title": "SA State Budget 2025-26 — Agency Statements Volume 4 (BP4)",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "2025-26", "agency-statements", "funding"],
+      "graph": true
+    },
+    {
+      "id": "sa-mybr-2526",
+      "file": "Mid-Year-Budget-Review-2025-26.pdf",
+      "title": "SA Mid-Year Budget Review 2025-26",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "2025-26", "mid-year-review"],
+      "graph": true
+    },
+    {
+      "id": "sa-budget-2425-speech",
+      "file": "2024-25-Budget-Speech.pdf",
+      "title": "SA State Budget 2024-25 — Budget Speech",
+      "category": "budget",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["state-budget", "2024-25", "speech"],
+      "graph": false
+    },
+    {
+      "id": "sa-budget-2526-media-premier",
+      "file": "A budget for Premier of South Australia.pdf",
+      "title": "SA Budget 2025-26 — Premier's media release",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "media-release"],
+      "graph": false
+    },
+    {
+      "id": "sa-budget-2526-media-regions",
+      "file": "Budget to support our regions _ Premier of South Australia.pdf",
+      "title": "SA Budget 2025-26 — Regions media release",
+      "category": "budget",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["state-budget", "media-release", "regional"],
+      "graph": false
+    },
+
+    {
+      "id": "australian-jobs-2025",
+      "file": "Australian Jobs 2025.pdf",
+      "title": "Australian Jobs 2025",
+      "category": "jobs-skills",
+      "region": "AU",
+      "year": 2025,
+      "tags": ["labour-market", "occupations", "industries", "pathways"],
+      "graph": true
+    },
+    {
+      "id": "jsa-employment-projections-2025",
+      "file": "employment_projection_-_summary.pdf",
+      "title": "JSA 2025 Employment Projections to May 2035 — Summary",
+      "category": "jobs-skills",
+      "region": "AU",
+      "year": 2025,
+      "tags": ["projections", "occupations", "industries", "2035"],
+      "graph": true
+    },
+    {
+      "id": "jsa-jobs-skills-report-2025",
+      "file": "jobs_and_skills_report_2025.pdf",
+      "title": "Jobs and Skills Report 2025 (JSA)",
+      "category": "jobs-skills",
+      "region": "AU",
+      "year": 2025,
+      "tags": ["labour-market", "skills-shortages"],
+      "graph": true
+    },
+    {
+      "id": "jsa-jobs-skills-report-2025-summary",
+      "file": "jobs_and_skills_report_summary.pdf",
+      "title": "Jobs and Skills Report 2025 — Summary",
+      "category": "jobs-skills",
+      "region": "AU",
+      "year": 2025,
+      "tags": ["labour-market", "summary"],
+      "graph": false
+    },
+    {
+      "id": "jsa-work-plan-2526",
+      "file": "jsa_work_plan_2025-26.pdf",
+      "title": "JSA Work Plan 2025-26",
+      "category": "jobs-skills",
+      "region": "AU",
+      "year": 2025,
+      "tags": ["work-plan"],
+      "graph": false
+    },
+    {
+      "id": "dsd-jobs-skills-outlook",
+      "file": "DSD779-Jobs-and-Skills-Outlook-FAv2-WEB.pdf",
+      "title": "SA Jobs and Skills Outlook (DSD)",
+      "category": "jobs-skills",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["skills-demand", "projections", "sectors"],
+      "graph": true
+    },
+    {
+      "id": "sasc-annual-report-2425",
+      "file": "SASC-2024-2025-Annual-Report.pdf",
+      "title": "SA Skills Commission Annual Report 2024-25",
+      "category": "jobs-skills",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["skills-commission", "apprenticeships", "traineeships"],
+      "graph": true
+    },
+    {
+      "id": "sasc-strategic-plan-2025",
+      "file": "SASC-Strategic-Plan-2025.pdf",
+      "title": "SA Skills Commission Strategic Plan 2025",
+      "category": "jobs-skills",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["skills-commission", "strategy"],
+      "graph": true
+    },
+    {
+      "id": "sa-workforce-strategy",
+      "file": "Workforce Strategy.pdf",
+      "title": "SA Workforce Strategy",
+      "category": "workforce",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["workforce-planning", "skills-demand"],
+      "graph": true
+    },
+    {
+      "id": "sa-workforce-strategy-placemat",
+      "file": "workforce-strategy-placemat.pdf",
+      "title": "SA Workforce Strategy — Placemat",
+      "category": "workforce",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["workforce-planning", "summary"],
+      "graph": false
+    },
+    {
+      "id": "regional-jobs-incentive-program",
+      "file": "Regional-Jobs-Support-and-Incentive-Program-Program-Guidelines_2022.pdf",
+      "title": "Regional Jobs Support and Incentive Program — Guidelines",
+      "category": "workforce",
+      "region": "SA",
+      "year": 2022,
+      "tags": ["regional", "programs", "incentives"],
+      "graph": true
+    },
+
+    {
+      "id": "dsd-clinical-trials",
+      "file": "20250423 DSD Clinical trials brochure - DIGITAL - A4 size.pdf",
+      "title": "SA Clinical Trials capability (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["health", "clinical-trials"],
+      "graph": true
+    },
+    {
+      "id": "dsd-clinical-trials-e2e",
+      "file": "End-to-end-clinical-trial-capabilities.pdf",
+      "title": "SA End-to-end clinical trial capabilities",
+      "category": "industry",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["health", "clinical-trials"],
+      "graph": true
+    },
+    {
+      "id": "dsd-space-state",
+      "file": "20250919 DSD-SA-space-state.pdf",
+      "title": "SA — The Space State (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["space", "defence"],
+      "graph": true
+    },
+    {
+      "id": "dsd-defence-space-maritime",
+      "file": "20251014 - DSD - Defence and Space-Maritime Edition_WEB.pdf",
+      "title": "SA Defence and Space — Maritime Edition (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["defence", "space", "maritime", "shipbuilding"],
+      "graph": true
+    },
+    {
+      "id": "dsd-defence-space",
+      "file": "defence nad space.pdf",
+      "title": "SA Defence and Space (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["defence", "space"],
+      "graph": true
+    },
+    {
+      "id": "dsd-renewables-hydrogen",
+      "file": "DSD SA Building global partnerships in renewables and hydrogen 010724.pdf",
+      "title": "SA Renewables and Hydrogen partnerships (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["energy", "hydrogen", "renewables"],
+      "graph": true
+    },
+    {
+      "id": "sa-hydrogen-action-plan",
+      "file": "south-australias-hydrogen-action-plan-online.pdf",
+      "title": "SA Hydrogen Action Plan",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["energy", "hydrogen", "programs"],
+      "graph": true
+    },
+    {
+      "id": "dsd-connected-health",
+      "file": "DSD SA Connected health innovation 010724.pdf",
+      "title": "SA Connected Health innovation (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["health", "innovation"],
+      "graph": true
+    },
+    {
+      "id": "dsd-critical-tech",
+      "file": "DSD SA Critical and emerging technologies 010724.pdf",
+      "title": "SA Critical and Emerging Technologies (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["technology", "critical-tech"],
+      "graph": true
+    },
+    {
+      "id": "dsd-quantum",
+      "file": "DSD SA Global leader in the industrial application of quantum technology 010724.pdf",
+      "title": "SA Quantum Technology (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["technology", "quantum"],
+      "graph": true
+    },
+    {
+      "id": "dsd-screen",
+      "file": "DSD SA The screen innovation state 010724.pdf",
+      "title": "SA Screen Innovation (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["creative", "screen"],
+      "graph": true
+    },
+    {
+      "id": "sa-game-development",
+      "file": "SA - The home of game development - August 2024.pdf",
+      "title": "SA — Home of Game Development",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["creative", "games", "technology"],
+      "graph": true
+    },
+    {
+      "id": "dsd-tourism",
+      "file": "DSD-Invest-SA-Tourism-250505.pdf",
+      "title": "Invest SA — Tourism (DSD)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["tourism", "investment"],
+      "graph": true
+    },
+    {
+      "id": "sa-green-economy",
+      "file": "Green Economy Brochure WEB.pdf",
+      "title": "SA Green Economy",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["energy", "green-economy"],
+      "graph": true
+    },
+    {
+      "id": "sa-green-iron-steel",
+      "file": "South-Australias-Green-iron-and-steel-strategy.pdf",
+      "title": "SA Green Iron and Steel Strategy",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["energy", "steel", "manufacturing"],
+      "graph": true
+    },
+    {
+      "id": "sa-blue-bio",
+      "file": "South-Australias-Blue-Bio-Industry.pdf",
+      "title": "SA Blue Bio Industry",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["marine", "bioscience"],
+      "graph": true
+    },
+    {
+      "id": "sa-manufacturing",
+      "file": "South Australia Manufacture where you grow.pdf",
+      "title": "SA — Manufacture where you grow",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["manufacturing"],
+      "graph": true
+    },
+    {
+      "id": "sa-bio-intl-2025",
+      "file": "BIO-Intl-2025.pdf",
+      "title": "SA at BIO International 2025",
+      "category": "industry",
+      "region": "SA",
+      "year": 2025,
+      "tags": ["bioscience", "health"],
+      "graph": true
+    },
+    {
+      "id": "dti-artificial-intelligence-sa",
+      "file": "DTI-Artificial IntelligenceSA.pdf",
+      "title": "Artificial Intelligence in SA (DTI)",
+      "category": "industry",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["technology", "ai"],
+      "graph": true
+    },
+
+    {
+      "id": "sa-career-education-pathways",
+      "file": "Career-Education-and-Pathways-Strategy.pdf",
+      "title": "SA Career Education and Pathways Strategy",
+      "category": "education",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["careers", "pathways", "schools"],
+      "graph": true
+    },
+    {
+      "id": "sa-public-education-strategy-insights",
+      "file": "strategy-for-public-education-2024-insights-report.pdf",
+      "title": "SA Strategy for Public Education — 2024 Insights Report",
+      "category": "education",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["public-education", "strategy"],
+      "graph": true
+    },
+    {
+      "id": "sa-public-education-roadmap",
+      "file": "strategy-for-public-education-system-roadmap.pdf",
+      "title": "SA Strategy for Public Education — System Roadmap",
+      "category": "education",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["public-education", "strategy"],
+      "graph": true
+    },
+    {
+      "id": "sa-education-infrastructure-20yr",
+      "file": "20-year-infrastructure-plan-public-education-every-school-a-great-school.pdf",
+      "title": "SA 20-Year Infrastructure Plan for Public Education",
+      "category": "education",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["infrastructure", "schools"],
+      "graph": true
+    },
+    {
+      "id": "sa-tafe-roadmap",
+      "file": "roadmap-for-future-of-tafe-sa.pdf",
+      "title": "Roadmap for the Future of TAFE SA",
+      "category": "education",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["tafe", "vet", "training"],
+      "graph": true
+    },
+    {
+      "id": "sa-foundation-skills-plan",
+      "file": "SA - Foundation Skills - Implementation Plan.pdf",
+      "title": "SA Foundation Skills Implementation Plan",
+      "category": "education",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["foundation-skills", "adult-education"],
+      "graph": true
+    },
+    {
+      "id": "sa-early-learning-strategy",
+      "file": "early-learning-strategy-2021-to-2031-all-young-children-thriving-and-learning.pdf",
+      "title": "SA Early Learning Strategy 2021-2031",
+      "category": "education",
+      "region": "SA",
+      "year": 2021,
+      "tags": ["early-learning"],
+      "graph": true
+    },
+    {
+      "id": "sa-early-learning-onepage",
+      "file": "early-learning-strategy-on-a-page.pdf",
+      "title": "SA Early Learning Strategy — On a page",
+      "category": "education",
+      "region": "SA",
+      "year": 2021,
+      "tags": ["early-learning", "summary"],
+      "graph": false
+    },
+    {
+      "id": "sa-early-learning-consultation",
+      "file": "early-learning-strategy-yoursay-consultation-report.pdf",
+      "title": "SA Early Learning Strategy — Consultation Report",
+      "category": "education",
+      "region": "SA",
+      "year": 2021,
+      "tags": ["early-learning", "consultation"],
+      "graph": false
+    },
+    {
+      "id": "sa-country-education-2122",
+      "file": "country-education-strategy-progress-report-2021-to-2022.pdf",
+      "title": "SA Country Education Strategy — Progress 2021-22",
+      "category": "education",
+      "region": "SA",
+      "year": 2022,
+      "tags": ["regional", "schools"],
+      "graph": false
+    },
+    {
+      "id": "sa-country-education-2023",
+      "file": "country-education-strategy-progress-report-2023.pdf",
+      "title": "SA Country Education Strategy — Progress 2023",
+      "category": "education",
+      "region": "SA",
+      "year": 2023,
+      "tags": ["regional", "schools"],
+      "graph": false
+    },
+    {
+      "id": "sa-country-education-2024",
+      "file": "country-education-strategy-progress-report-2024.pdf",
+      "title": "SA Country Education Strategy — Progress 2024",
+      "category": "education",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["regional", "schools"],
+      "graph": true
+    },
+    {
+      "id": "sa-civics-reforms",
+      "file": "Civics and citizenship reforms.pdf",
+      "title": "SA Civics and Citizenship Reforms",
+      "category": "education",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["curriculum"],
+      "graph": false
+    },
+    {
+      "id": "sa-specialist-teacher-plan",
+      "file": "specialist-teacher-workforce-plan.pdf",
+      "title": "SA Specialist Teacher Workforce Plan",
+      "category": "education",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["teachers", "workforce-planning"],
+      "graph": true
+    },
+    {
+      "id": "sa-music-education-strategy",
+      "file": "2019-2029-music-education-strategy.pdf",
+      "title": "SA Music Education Strategy 2019-2029",
+      "category": "education",
+      "region": "SA",
+      "year": 2019,
+      "tags": ["music", "curriculum"],
+      "graph": false
+    },
+    {
+      "id": "sa-music-education-key-initiative",
+      "file": "key-initiative-music-education-strategy.pdf",
+      "title": "SA Music Education Strategy — Key Initiative",
+      "category": "education",
+      "region": "SA",
+      "year": 2019,
+      "tags": ["music"],
+      "graph": false
+    },
+    {
+      "id": "sa-music-framework",
+      "file": "quality-music-education-framework.pdf",
+      "title": "SA Quality Music Education Framework",
+      "category": "education",
+      "region": "SA",
+      "year": 2019,
+      "tags": ["music"],
+      "graph": false
+    },
+    {
+      "id": "sa-music-framework-poster",
+      "file": "quality-music-education-framework-promotional-poster.pdf",
+      "title": "SA Quality Music Education Framework — Poster",
+      "category": "education",
+      "region": "SA",
+      "year": 2019,
+      "tags": ["music", "poster"],
+      "graph": false,
+      "skip": true,
+      "skipReason": "promotional poster; no indexable substance"
+    },
+    {
+      "id": "sa-music-action-template",
+      "file": "music-education-framework-action-template.docx",
+      "title": "SA Music Education Framework — Action Template",
+      "category": "education",
+      "region": "SA",
+      "year": 2019,
+      "tags": ["music", "template"],
+      "graph": false,
+      "skip": true,
+      "skipReason": "blank template document"
+    },
+
+    {
+      "id": "au-interview-prep-dcceew",
+      "file": "dcceew-interview-preparation-guide.pdf",
+      "title": "Interview Preparation Guide (DCCEEW)",
+      "category": "career-guidance",
+      "region": "AU",
+      "year": 2024,
+      "tags": ["interview"],
+      "graph": false
+    },
+    {
+      "id": "au-interview-prep-generic",
+      "file": "interview-preparation-guide.pdf",
+      "title": "Interview Preparation Guide",
+      "category": "career-guidance",
+      "region": "AU",
+      "year": 2024,
+      "tags": ["interview"],
+      "graph": false
+    },
+    {
+      "id": "au-interview-prep-ahrc",
+      "file": "Preparing for an interview _ Australian Human Rights Commission.pdf",
+      "title": "Preparing for an Interview (AHRC)",
+      "category": "career-guidance",
+      "region": "AU",
+      "year": 2024,
+      "tags": ["interview", "accessibility"],
+      "graph": false
+    },
+    {
+      "id": "au-interview-includeability",
+      "file": "12_-_includeability_-_guide_-_preparing_for_an_interview_accessible.pdf",
+      "title": "IncludeAbility — Preparing for an Interview",
+      "category": "career-guidance",
+      "region": "AU",
+      "year": 2024,
+      "tags": ["interview", "disability", "accessibility"],
+      "graph": false
+    },
+    {
+      "id": "au-resume-face2face",
+      "file": "How to write a winning resume - face2face Recruitment.pdf",
+      "title": "How to Write a Winning Resume (face2face)",
+      "category": "career-guidance",
+      "region": "AU",
+      "year": 2024,
+      "tags": ["resume"],
+      "graph": false
+    },
+    {
+      "id": "au-selection-criteria-face2face",
+      "file": "Selection criteria_ How to respond - face2face Recruitment.pdf",
+      "title": "Selection Criteria — How to Respond (face2face)",
+      "category": "career-guidance",
+      "region": "AU",
+      "year": 2024,
+      "tags": ["selection-criteria"],
+      "graph": false
+    },
+    {
+      "id": "au-selection-criteria-hays",
+      "file": "Key selection criteria for goverment jobs _ Hays.pdf",
+      "title": "Key Selection Criteria for Government Jobs (Hays)",
+      "category": "career-guidance",
+      "region": "AU",
+      "year": 2024,
+      "tags": ["selection-criteria", "government-jobs"],
+      "graph": false
+    },
+    {
+      "id": "au-addressing-selection-criteria",
+      "file": "addressing-selection-criteria.pdf",
+      "title": "Addressing Selection Criteria",
+      "category": "career-guidance",
+      "region": "AU",
+      "year": 2024,
+      "tags": ["selection-criteria"],
+      "graph": false
+    },
+    {
+      "id": "au-job-jumpstart-workbook",
+      "file": "Job Jumpstart Job Search Basics Workbook.pdf",
+      "title": "Job Jumpstart — Job Search Basics Workbook",
+      "category": "career-guidance",
+      "region": "AU",
+      "year": 2024,
+      "tags": ["job-search"],
+      "graph": false
+    },
+    {
+      "id": "sa-ocpse-recruitment-guideline",
+      "file": "OCPSE-Recruitment-Guideline.pdf",
+      "title": "OCPSE Recruitment Guideline (SA public sector)",
+      "category": "career-guidance",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["recruitment", "government-jobs"],
+      "graph": false
+    },
+    {
+      "id": "sa-trainee-pathway-info",
+      "file": "Information-Sheet-Pathway-1_New-Trainees-Apprentices-and-Graduates-Sept2021.pdf",
+      "title": "SA Pathway 1 — New Trainees, Apprentices and Graduates",
+      "category": "career-guidance",
+      "region": "SA",
+      "year": 2021,
+      "tags": ["apprenticeships", "traineeships", "graduates"],
+      "graph": false
+    },
+
+    {
+      "id": "au-disability-strategy",
+      "file": "5831-dss3513-ads-strategy-2021.pdf",
+      "title": "Australia's Disability Strategy 2021-2031",
+      "category": "inclusion",
+      "region": "AU",
+      "year": 2021,
+      "tags": ["disability", "strategy"],
+      "graph": true
+    },
+    {
+      "id": "sa-disability-access-inclusion",
+      "file": "disability-access-and-inclusion-plan.pdf",
+      "title": "SA Disability Access and Inclusion Plan",
+      "category": "inclusion",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["disability", "inclusion"],
+      "graph": true
+    },
+    {
+      "id": "sa-reconciliation-action-plan",
+      "file": "reconciliation-action-plan.pdf",
+      "title": "SA Reconciliation Action Plan",
+      "category": "inclusion",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["first-nations", "reconciliation"],
+      "graph": false
+    },
+    {
+      "id": "au-report-it-right",
+      "file": "Report-it-Right_Media-Guidelines_2021_FA.pdf",
+      "title": "Report it Right — Media Guidelines",
+      "category": "inclusion",
+      "region": "AU",
+      "year": 2021,
+      "tags": ["media-guidelines"],
+      "graph": false
+    },
+    {
+      "id": "sa-climate-actions",
+      "file": "935664-DEW-SA-Government-Climate-Actions-doc-V8.pdf",
+      "title": "SA Government Climate Actions (DEW)",
+      "category": "environment",
+      "region": "SA",
+      "year": 2024,
+      "tags": ["climate", "programs"],
+      "graph": true
+    },
+
+    {
+      "id": "misc-asx-cashflow",
+      "file": "September-2024-Quarterly-Activities-Appendix-5B-Cash-Flow-Report.pdf",
+      "title": "ASX Appendix 5B Cash Flow Report (stray file)",
+      "category": "misc",
+      "region": "AU",
+      "year": 2024,
+      "tags": [],
+      "graph": false,
+      "skip": true,
+      "skipReason": "stray ASX company filing — not corpus material"
+    },
+    {
+      "id": "misc-one-more",
+      "file": "one more.pdf",
+      "title": "Unidentified document",
+      "category": "misc",
+      "region": "SA",
+      "year": 2024,
+      "tags": [],
+      "graph": false,
+      "skip": true,
+      "skipReason": "unidentified — review manually before ingesting"
+    },
+    {
+      "id": "misc-scrapping-txt",
+      "file": "scrapping.txt",
+      "title": "Scrape target list (planning file)",
+      "category": "misc",
+      "region": "SA",
+      "year": 2025,
+      "tags": [],
+      "graph": false,
+      "skip": true,
+      "skipReason": "planning file, superseded by webSources below"
+    },
+    {
+      "id": "misc-scrapping-ods",
+      "file": "scrapping_lsit.ods",
+      "title": "Scrape target list spreadsheet (planning file)",
+      "category": "misc",
+      "region": "SA",
+      "year": 2025,
+      "tags": [],
+      "graph": false,
+      "skip": true,
+      "skipReason": "planning file, superseded by webSources below"
+    }
+  ],
+  "webSources": [
+    {
+      "id": "web-sa-gov-employment",
+      "url": "https://www.sa.gov.au/topics/employment-money-and-taxes",
+      "title": "sa.gov.au — Employment, money and taxes",
+      "category": "career-guidance",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["job-search", "programs", "live"],
+      "maxPages": 15,
+      "graph": false
+    },
+    {
+      "id": "web-skills-sa",
+      "url": "https://www.skills.sa.gov.au/",
+      "title": "Skills SA — training and subsidised courses",
+      "category": "jobs-skills",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["training", "subsidies", "tafe", "live"],
+      "maxPages": 15,
+      "graph": true
+    },
+    {
+      "id": "web-migration-sa",
+      "url": "https://migration.sa.gov.au/",
+      "title": "Migration SA — skilled migrant support",
+      "category": "career-guidance",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["migration", "skilled-visas", "live"],
+      "maxPages": 15,
+      "graph": false
+    },
+    {
+      "id": "web-publicsector-sa",
+      "url": "https://www.publicsector.sa.gov.au/",
+      "title": "I Work for SA — public sector careers",
+      "category": "career-guidance",
+      "region": "SA",
+      "year": 2026,
+      "tags": ["government-jobs", "recruitment", "live"],
+      "maxPages": 15,
+      "graph": false
+    },
+    {
+      "id": "web-dewr-skills",
+      "url": "https://www.dewr.gov.au/skills-and-training",
+      "title": "DEWR — skills and training programs",
+      "category": "jobs-skills",
+      "region": "AU",
+      "year": 2026,
+      "tags": ["training", "programs", "live"],
+      "maxPages": 15,
+      "graph": true
+    }
+  ],
+  "watch": [
+    { "title": "Jobs and Skills Report 2026 (JSA)", "expected": "2026-11" },
+    { "title": "SA Mid-Year Budget Review 2026-27", "expected": "2026-12" },
+    { "title": "SASC Annual Report 2025-26", "expected": "2026-11" },
+    { "title": "JSA Work Plan 2026-27", "expected": "check jobsandskills.gov.au" },
+    { "title": "DSD Jobs and Skills Outlook refresh", "expected": "check statedevelopment.sa.gov.au" },
+    { "title": "SA 2026-27 premier budget media releases", "expected": "statebudget.sa.gov.au/media" }
+  ]
+}

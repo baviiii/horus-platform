@@ -12,6 +12,7 @@ export {
 export { embedQuery, embedTexts } from './embeddings.js';
 export { extractHtml, normalizeUrl, type ExtractedPage } from './extract-html.js';
 export { extractPdf, type ExtractedPdf } from './extract-pdf.js';
+export { extractDocx, type ExtractedDocx } from './extract-docx.js';
 export { blockedUrlReason } from './net-guard.js';
 export {
   ingestPdf,
@@ -26,12 +27,15 @@ export {
   countSessionChunks,
   deleteSession,
   ensureKnowledgeIndex,
+  fetchSourceChunks,
   listSessionSources,
   purgeExpired,
   searchKnowledge,
   upsertChunks,
+  type ChunkMeta,
   type KnowledgeChunkDoc,
   type KnowledgeHit,
   type KnowledgeSource,
   type SearchKnowledgeParams,
+  type SourceChunk,
 } from './store.js';

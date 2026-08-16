@@ -64,14 +64,18 @@ and mint an API key.
 Goal: tenant uploads a PDF, gets searchable chunks + a working chat.
 
 - [ ] Worker: `pdf-renderer` (Container Apps Job) — port from `azure-functions/pdf-renderer/`
-- [ ] Worker: `ingest` queue consumer — port `rag-metadata` logic
-- [ ] `documents.upload` tRPC mutation: SAS URL → blob → enqueue
-- [ ] `documents.list/get/delete` wired against real Prisma rows
-- [ ] Azure Search index provisioned per tenant (or filtered by tenantId)
-- [ ] `rag.search` returns hybrid (vector + keyword) results, tenant-filtered
-- [ ] `rag.chat` streams answers with citations
-- [ ] Chat session/message persistence (`ChatSession`, `ChatMessage`)
-- [ ] UsageRecord rows for `RAG_QUERIES`, `INGEST_PAGES`, `EMBEDDING_TOKENS`
+- [ ] Worker: `ingest` queue consumer — deferred; synchronous ingest is holding at current volumes
+- [x] Document upload — shipped as multipart route `/api/documents/upload` → tenant partition
+      (SAS/queue flow when file volumes outgrow synchronous)
+- [x] `documents.list/get/delete` wired against real Prisma rows
+- [x] Azure Search index shared, filtered by tenantId + session partition (+ category/year/tags facets, 2026-07-30)
+- [~] `rag.search` — engine live everywhere (playground, workspace agent, intelligence.brief);
+  thin `rag.*` router wiring still stubbed
+- [x] `rag.chat` streams answers with citations — via `/api/agent/chat` (workspace agent)
+- [x] Chat session/message persistence (`ChatSession`, `ChatMessage`)
+- [~] UsageRecord rows — `DOCUMENTS_PROCESSED` + completion tokens metered; embedding meters pending
+- [x] Corpus tooling (2026-07-30): `seed-corpus/manifest.json` (every doc tagged
+      category/region/year/tags/graph) + `scripts/fetch-corpus.ts` + `scripts/ingest-corpus.ts`
 
 **Gate**: upload → 200 pages indexed in <5 min → chat answers cite the doc.
 
@@ -79,10 +83,17 @@ Goal: tenant uploads a PDF, gets searchable chunks + a working chat.
 
 ## Phase 3 — Knowledge graph & agentic (week 3)
 
-- [ ] Cosmos Gremlin graph provisioned, tenant-partitioned
-- [ ] Worker: `entity-extraction` (port from `azure-functions/entity-extraction/`)
-- [ ] Worker: `graph-builder` writes Entity + Relationship + Cosmos vertices
-- [ ] `graph.entities/relationships/path` real implementations
+- [x] ~~Cosmos Gremlin graph provisioned~~ — DECISION 2026-07-30: Postgres is the canonical
+      graph store (Entity/Relationship/DocumentEntity, RLS-scoped). Cosmos deferred until a
+      tenant's graph outgrows relational reach.
+- [x] Entity extraction — reimplemented as `@horus/core/entities` (LLM structured extraction,
+      typed enums, evidence quotes) + `scripts/build-graph.ts`; old Gremlin worker retired
+- [x] Graph persistence — upserts converge across documents (aliases merged, mentions counted,
+      edge evidence sampled)
+- [x] `graph.query/traverse/stats` + `entities.list/relationships/documents` real (BFS ≤3 hops)
+- [x] `graph_lookup` agent tool — workspace chat traverses the graph and cites source documents
+- [x] `intelligence.brief` — GraphRAG deep-dive endpoint (field/occupation/program → overview,
+      money flows, skills, outlook; every claim cited)
 - [ ] `agentic.plan` (port `agentic-planner`) returns structured plan
 - [ ] `agentic.execute` runs plan with tool-calling, streams progress
 - [ ] `agentic.intersection` (port `intersection-reasoning`) cross-doc reasoning

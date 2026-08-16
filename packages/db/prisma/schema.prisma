@@ -61,6 +61,10 @@ model Tenant {
   webhooks       Webhook[]
   enabledModules TenantModule[]
   connections    Connection[]
+  incidentTemplates IncidentTemplate[]
+  incidents         Incident[]
+  incidentEvidence  IncidentEvidence[]
+  incidentEvents    IncidentEvent[]
 
   @@index([slug])
   @@index([customDomain])
@@ -474,4 +478,151 @@ model Alert {
 
   @@index([tenantId, status, createdAt])
   @@map("alerts")
+}
+
+// =============================================================================
+// Incident reporting (NDIS vertical — compliance-grade document generation)
+//
+// A tenant absorbs their own incident form into an IncidentTemplate (typed
+// field schema), then each Incident is drafted by AI from evidence with
+// per-field citations, reviewed and approved by a human, and exported as
+// .docx (identified or de-identified). Horus never submits to a regulator.
+// =============================================================================
+
+enum TemplateStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum IncidentStatus {
+  DRAFT
+  IN_REVIEW
+  APPROVED
+  EXPORTED
+  CLOSED
+}
+
+enum IncidentSeverity {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum EvidenceKind {
+  NARRATIVE // reporter's own account (the primary intake)
+  PHOTO // image evidence, stored in blob + AI-analyzed to text
+  DOCUMENT // uploaded file (shift notes, medical summary...), text-extracted
+  NOTE // manual addendum typed during review
+}
+
+model IncidentTemplate {
+  id          String         @id @default(uuid()) @db.Uuid
+  tenantId    String         @db.Uuid
+  name        String
+  description String?
+  status      TemplateStatus @default(DRAFT)
+  version     Int            @default(1)
+  // TemplateSchema JSON: { sections: [{key,title,description?}],
+  //   fields: [{key,label,type,required,pii,section,options?,help?,conditional?}] }
+  // Validated by @horus/core/incidents before every write.
+  schema      Json
+  // Provenance of the absorbed source form.
+  sourceDocumentTitle String?
+  sourceExcerpt       String?
+  createdById String   @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant     @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  incidents Incident[]
+
+  @@index([tenantId, status])
+  @@map("incident_templates")
+}
+
+model Incident {
+  id         String           @id @default(uuid()) @db.Uuid
+  tenantId   String           @db.Uuid
+  ref        String // human handle, e.g. INC-2026-0042
+  templateId String?          @db.Uuid
+  status     IncidentStatus   @default(DRAFT)
+  severity   IncidentSeverity @default(MEDIUM)
+  // Regulatory pack category key (e.g. ndis: death, serious_injury,
+  // unauthorised_restrictive_practice...). Drives deadline computation.
+  categoryKey String?
+  title       String
+  occurredAt   DateTime?
+  // When key personnel became aware — the statutory clocks run from here.
+  discoveredAt DateTime?
+  location     String?
+  summary      String?
+  // IncidentFields JSON: { [fieldKey]: { value, confidence?, evidence?: [{evidenceId, quote}] } }
+  // "manual" confidence marks human-entered values the AI must not overwrite.
+  fields          Json     @default("{}")
+  missingRequired String[] @default([])
+  // Stable pseudonym map for de-identified exports: { "Jane Doe": "Participant A" }.
+  // Persisted on first de-ID export so re-exports stay consistent.
+  deidMap Json?
+  // Statutory clocks (computed from categoryKey + discoveredAt; null = no category).
+  notifyDueAt  DateTime?
+  reportDueAt  DateTime?
+  reportedById String    @db.Uuid
+  approvedById String?   @db.Uuid
+  approvedAt   DateTime?
+  exportedAt   DateTime?
+  closedAt     DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  tenant   Tenant             @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  template IncidentTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  evidence IncidentEvidence[]
+  events   IncidentEvent[]
+
+  @@unique([tenantId, ref])
+  @@index([tenantId, status, createdAt])
+  @@index([tenantId, notifyDueAt])
+  @@map("incidents")
+}
+
+model IncidentEvidence {
+  id         String       @id @default(uuid()) @db.Uuid
+  tenantId   String       @db.Uuid
+  incidentId String       @db.Uuid
+  kind       EvidenceKind
+  label      String // "Reporter narrative", filename, ...
+  // Narrative text / extracted document text / AI photo analysis.
+  text     String?
+  blobUrl  String?
+  mimeType String?
+  bytes    Int?
+  addedById String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, incidentId])
+  @@map("incident_evidence")
+}
+
+model IncidentEvent {
+  id         String  @id @default(uuid()) @db.Uuid
+  tenantId   String  @db.Uuid
+  incidentId String  @db.Uuid
+  // created | drafted | field_updated | evidence_added | submitted | approved |
+  // changes_requested | exported_identified | exported_deidentified | closed
+  kind    String
+  actorId String? @db.Uuid
+  note    String?
+  meta    Json    @default("{}")
+  createdAt DateTime @default(now())
+
+  tenant   Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  incident Incident @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, incidentId, createdAt])
+  @@map("incident_events")
 }

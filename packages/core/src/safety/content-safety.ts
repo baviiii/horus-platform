@@ -85,3 +85,47 @@ export async function assertTextSafe(text: string, label: string): Promise<void>
     throw new Error(`${label} was blocked by the content policy (${verdict.category}).`);
   }
 }
+
+function imageConfig(): { url: string; key: string } | null {
+  const endpoint = process.env.AZURE_CONTENT_SAFETY_ENDPOINT;
+  const key = process.env.AZURE_OPENAI_API_KEY;
+  if (!endpoint || !key) return null;
+  return {
+    url: new URL(`contentsafety/image:analyze?api-version=${API_VERSION}`, endpoint).toString(),
+    key,
+  };
+}
+
+/**
+ * Analyze an uploaded image (incident photo evidence). Same posture as text:
+ * block at medium+ severity, fail open on service errors.
+ */
+export async function moderateImage(data: Uint8Array): Promise<ModerationVerdict> {
+  const cfg = imageConfig();
+  if (!cfg || data.byteLength === 0) return { blocked: false };
+
+  try {
+    const res = await fetch(cfg.url, {
+      method: 'POST',
+      headers: { 'Ocp-Apim-Subscription-Key': cfg.key, 'content-type': 'application/json' },
+      body: JSON.stringify({ image: { content: Buffer.from(data).toString('base64') } }),
+      signal: AbortSignal.timeout(8_000),
+    });
+    if (!res.ok) {
+      console.warn(`content safety image analyze failed: HTTP ${res.status}`);
+      return { blocked: false };
+    }
+    const body = (await res.json()) as { categoriesAnalysis?: CategoryAnalysis[] };
+    const worst = (body.categoriesAnalysis ?? []).reduce<CategoryAnalysis | null>(
+      (acc, c) => (acc && acc.severity >= c.severity ? acc : c),
+      null,
+    );
+    if (worst && worst.severity >= BLOCK_SEVERITY) {
+      return { blocked: true, category: worst.category, severity: worst.severity };
+    }
+    return { blocked: false };
+  } catch {
+    console.warn('content safety image analyze failed: network/timeout');
+    return { blocked: false };
+  }
+}

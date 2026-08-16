@@ -6,6 +6,7 @@
  * markers resolve to clickable citations in the UI.
  */
 import type { ToolDefinitionUnion } from '@azure/ai-agents';
+import { prisma } from '@horus/db';
 import { embedQuery } from '../knowledge/embeddings.js';
 import { searchKnowledge } from '../knowledge/store.js';
 import { extractHtml } from '../knowledge/extract-html.js';
@@ -82,6 +83,24 @@ export const AGENT_FUNCTION_TOOLS: ToolDefinitionUnion[] = [
           url: { type: 'string', description: 'Absolute http(s) URL to fetch.' },
         },
         required: ['url'],
+      },
+    },
+  },
+  {
+    type: 'function',
+    function: {
+      name: 'graph_lookup',
+      description:
+        "Look up an entity (organization, program, sector, occupation, skill, location…) in the workspace knowledge graph and see how it connects: what funds it, what it targets, which skills and occupations it involves, which documents mention it. Use for relationship questions ('what programs fund X', 'how does Y connect to Z') and to enrich deep-dives. Complements search_knowledge — graph for structure, search for passages.",
+      parameters: {
+        type: 'object',
+        properties: {
+          entity: {
+            type: 'string',
+            description: 'Entity name to look up, e.g. "TAFE SA", "Fee-Free TAFE", "defence".',
+          },
+        },
+        required: ['entity'],
       },
     },
   },
@@ -178,4 +197,109 @@ export async function executeFetchPage(registry: CitationRegistry, url: string):
   } catch {
     return 'Fetch failed (timeout or network error).';
   }
+}
+
+const GRAPH_RELS_PER_DIRECTION = 24;
+
+/**
+ * graph_lookup — resolve an entity in the tenant's Postgres knowledge graph
+ * and hand the model a structured neighborhood: grouped edges with evidence
+ * quotes, plus the documents that mention the entity (registered as
+ * citations). The playground tenant has no graph; degrade honestly.
+ */
+export async function executeGraphLookup(
+  scope: ToolScope,
+  registry: CitationRegistry,
+  entityName: string,
+): Promise<string> {
+  const name = entityName.trim().slice(0, 120);
+  if (!name) return 'graph_lookup needs an entity name.';
+
+  const entity =
+    (await prisma.entity.findFirst({
+      where: { tenantId: scope.tenantId, name: { equals: name, mode: 'insensitive' } },
+      orderBy: { documents: { _count: 'desc' } },
+    })) ??
+    (await prisma.entity.findFirst({
+      where: { tenantId: scope.tenantId, aliases: { has: name } },
+      orderBy: { documents: { _count: 'desc' } },
+    })) ??
+    (await prisma.entity.findFirst({
+      where: { tenantId: scope.tenantId, name: { contains: name, mode: 'insensitive' } },
+      orderBy: { documents: { _count: 'desc' } },
+    }));
+
+  if (!entity) {
+    return `No entity matching "${name}" in the knowledge graph. Fall back to search_knowledge.`;
+  }
+
+  const [outgoing, incoming, docLinks] = await Promise.all([
+    prisma.relationship.findMany({
+      where: { tenantId: scope.tenantId, fromEntityId: entity.id },
+      include: { toEntity: { select: { name: true, type: true } } },
+      orderBy: { confidence: 'desc' },
+      take: GRAPH_RELS_PER_DIRECTION,
+    }),
+    prisma.relationship.findMany({
+      where: { tenantId: scope.tenantId, toEntityId: entity.id },
+      include: { fromEntity: { select: { name: true, type: true } } },
+      orderBy: { confidence: 'desc' },
+      take: GRAPH_RELS_PER_DIRECTION,
+    }),
+    prisma.documentEntity.findMany({
+      where: { tenantId: scope.tenantId, entityId: entity.id },
+      include: { document: { select: { id: true, title: true, category: true } } },
+      orderBy: { mentions: 'desc' },
+      take: 4,
+    }),
+  ]);
+
+  const lines: string[] = [];
+  const attributes = (entity.metadata as { attributes?: Record<string, unknown> }).attributes;
+  lines.push(
+    `Entity: ${entity.name} (${entity.type})` +
+      (entity.aliases.length > 0 ? ` — aka ${entity.aliases.join(', ')}` : ''),
+  );
+  if (attributes && Object.keys(attributes).length > 0) {
+    lines.push(`Attributes: ${JSON.stringify(attributes)}`);
+  }
+
+  const evidenceOf = (meta: unknown): string => {
+    const ev = (meta as { evidence?: string[] })?.evidence?.[0];
+    return ev ? ` — "${ev.slice(0, 140)}"` : '';
+  };
+  if (outgoing.length > 0) {
+    lines.push('\nOutgoing:');
+    for (const rel of outgoing) {
+      lines.push(
+        `- ${rel.type} → ${rel.toEntity.name} (${rel.toEntity.type})${evidenceOf(rel.metadata)}`,
+      );
+    }
+  }
+  if (incoming.length > 0) {
+    lines.push('\nIncoming:');
+    for (const rel of incoming) {
+      lines.push(
+        `- ${rel.fromEntity.name} (${rel.fromEntity.type}) ${rel.type} →${evidenceOf(rel.metadata)}`,
+      );
+    }
+  }
+  if (outgoing.length === 0 && incoming.length === 0) {
+    lines.push('No recorded relationships yet.');
+  }
+
+  if (docLinks.length > 0) {
+    lines.push('\nMentioned in (cite as [n]):');
+    for (const link of docLinks) {
+      const n = registry.register({
+        key: `graphdoc:${link.document.id}`,
+        title: link.document.title,
+        sourceType: 'pdf',
+        snippet: `${entity.name} — ${link.mentions} mention(s) in ${link.document.title}`,
+      });
+      lines.push(`[${n}] ${link.document.title} (${link.mentions} mentions)`);
+    }
+  }
+
+  return lines.join('\n');
 }

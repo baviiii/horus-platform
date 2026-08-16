@@ -17,9 +17,18 @@ export default async function TenantLayout({
   };
   const tenantName = branding.name || tenant.name;
 
-  const openAlerts = await prisma.alert.count({
-    where: { tenantId: tenant.id, status: 'OPEN' },
-  });
+  const [openAlerts, overdueIncidents] = await Promise.all([
+    prisma.alert.count({
+      where: { tenantId: tenant.id, status: 'OPEN' },
+    }),
+    prisma.incident.count({
+      where: {
+        tenantId: tenant.id,
+        status: { in: ['DRAFT', 'IN_REVIEW'] },
+        notifyDueAt: { lt: new Date() },
+      },
+    }),
+  ]);
 
   const groups: NavGroup[] = [
     {
@@ -27,6 +36,13 @@ export default async function TenantLayout({
         { href: `/t/${slug}`, label: 'Overview', icon: <IconHome /> },
         { href: `/t/${slug}/chat`, label: 'Chat', icon: <IconChat /> },
         { href: `/t/${slug}/documents`, label: 'Documents', icon: <IconDoc /> },
+        {
+          href: `/t/${slug}/incidents`,
+          label: 'Incidents',
+          icon: <IconIncident />,
+          ...(overdueIncidents > 0 && { badge: String(overdueIncidents) }),
+        },
+        { href: `/t/${slug}/intelligence`, label: 'Intelligence', icon: <IconIntel /> },
         { href: `/t/${slug}/graph`, label: 'Knowledge graph', icon: <IconGraph /> },
         { href: `/t/${slug}/connections`, label: 'Connections', icon: <IconPlug /> },
         {
@@ -112,6 +128,39 @@ function IconDoc() {
         strokeLinejoin="round"
       />
       <path d="M9 2v3h3" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
+    </Icon>
+  );
+}
+function IconIntel() {
+  return (
+    <Icon>
+      <path
+        d="M6 13h4M6.5 11a4 4 0 111 0"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8 2.5V1.5M13 8h1M2 8h1M11.5 4.5l.7-.7M3.8 3.8l.7.7"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </Icon>
+  );
+}
+function IconIncident() {
+  return (
+    <Icon>
+      <path
+        d="M8 2.5L14 13H2L8 2.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+      <path d="M8 6.5v3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+      <circle cx="8" cy="11.2" r="0.7" fill="currentColor" />
     </Icon>
   );
 }

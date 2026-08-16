@@ -26,6 +26,12 @@ resource "azurerm_cognitive_account" "main" {
   sku_name              = "S0"
   custom_subdomain_name = local.account_name
 
+  # Must be declared explicitly. azurerm gained this argument in 4.x and it
+  # defaults to false, so leaving it unset reads as drift against an account
+  # that already has project management on — and the provider "fixes" that by
+  # REPLACING the account, taking every model deployment with it.
+  project_management_enabled = true
+
   public_network_access_enabled = true
 
   identity {
@@ -113,6 +119,8 @@ resource "azurerm_cognitive_deployment" "embedding" {
 # azapi, not azurerm: the provider's pinned deployments API predates the
 # newest realtime models and rejects them with DeploymentModelNotSupported.
 resource "azapi_resource" "realtime" {
+  count = var.deploy_realtime ? 1 : 0
+
   type      = "Microsoft.CognitiveServices/accounts/deployments@2025-06-01"
   name      = var.realtime_model_name
   parent_id = azurerm_cognitive_account.main.id

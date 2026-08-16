@@ -18,3 +18,8 @@ output "sku" {
   description = "Provisioned SKU (free tier has no semantic reranker — code should not request it)."
   value       = azurerm_search_service.main.sku
 }
+
+output "principal_id" {
+  description = "System-assigned identity of the search service — grant it blob read + Foundry access for keyless indexer runs."
+  value       = azurerm_search_service.main.identity[0].principal_id
+}

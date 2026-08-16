@@ -63,7 +63,29 @@ variable "deploy_bing_grounding" {
 }
 
 variable "search_sku" {
-  description = "Azure AI Search SKU. free = $0 playground tier; flip to basic for real tenants (semantic reranker, SLA)."
+  description = "Azure AI Search SKU. free = 50 MB total and a cap of 3 indexers/skillsets/data sources — too small for the document pipeline; basic is the floor for the corpus indexer."
   type        = string
-  default     = "free"
+  default     = "basic"
+}
+
+variable "deploy_au_document_plane" {
+  description = "Provision the Australian document plane (Foundry account in australiaeast carrying Content Understanding + document embeddings). Required for the AI Search corpus indexer."
+  type        = bool
+  default     = true
+}
+
+variable "au_document_location" {
+  description = "Region for the Australian document plane. Must be a Content Understanding region — australiaeast keeps all data at rest onshore and does not use data-zone processing."
+  type        = string
+  default     = "australiaeast"
+
+  validation {
+    # Content Understanding GA regions, verified 2026-08-01.
+    condition = contains([
+      "australiaeast", "eastus", "eastus2", "japaneast", "northeurope",
+      "southcentralus", "southeastasia", "swedencentral", "uksouth",
+      "westeurope", "westus", "westus3",
+    ], var.au_document_location)
+    error_message = "au_document_location must be a region where Azure Content Understanding is available."
+  }
 }

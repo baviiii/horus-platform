@@ -1,0 +1,311 @@
+/**
+ * NDIS starter incident template.
+ *
+ * A realistic, complete NDIS provider incident form: used as the seeded
+ * starter template for new tenants (edit, don't start blank) and as the
+ * fixed form behind the public playground demo. Structured the way Quality &
+ * Safety teams actually lay these out, including the conditional restrictive-
+ * practice section.
+ */
+import type { TemplateSchema } from './schema.js';
+
+export const STARTER_TEMPLATE_NAME = 'NDIS Incident Report (Horus starter)';
+export const STARTER_TEMPLATE_DESCRIPTION =
+  'A complete NDIS provider incident form covering reportable-incident details, people involved, ' +
+  'response, notifications, and restrictive-practice specifics. Absorb your own form to replace it.';
+
+export const STARTER_NDIS_TEMPLATE: TemplateSchema = {
+  sections: [
+    { key: 'incident_details', title: 'Incident details' },
+    { key: 'people_involved', title: 'People involved' },
+    {
+      key: 'incident_description',
+      title: 'Description of the incident',
+      description: 'Factual account only — what was seen, heard, and done.',
+    },
+    { key: 'immediate_response', title: 'Immediate response' },
+    {
+      key: 'restrictive_practice',
+      title: 'Restrictive practice details',
+      description: 'Complete only if a restrictive practice was used.',
+    },
+    { key: 'notifications', title: 'Notifications' },
+    { key: 'follow_up', title: 'Follow-up and prevention' },
+  ],
+  fields: [
+    // ── Incident details ──
+    {
+      key: 'incident_date_time',
+      label: 'Date and time of incident',
+      type: 'datetime',
+      required: true,
+      pii: false,
+      section: 'incident_details',
+    },
+    {
+      key: 'aware_date_time',
+      label: 'Date and time provider became aware',
+      type: 'datetime',
+      required: true,
+      pii: false,
+      section: 'incident_details',
+      help: 'NDIS notification timeframes run from this moment.',
+    },
+    {
+      key: 'location',
+      label: 'Location of incident',
+      type: 'text',
+      required: true,
+      pii: false,
+      section: 'incident_details',
+    },
+    {
+      key: 'incident_type',
+      label: 'Type of incident',
+      type: 'select',
+      required: true,
+      pii: false,
+      section: 'incident_details',
+      options: [
+        'Injury',
+        'Medication error',
+        'Missing person',
+        'Property damage',
+        'Behavioural incident',
+        'Restrictive practice',
+        'Abuse or neglect (alleged)',
+        'Death',
+        'Near miss',
+        'Other',
+      ],
+    },
+    {
+      key: 'reportable_ndis',
+      label: 'Potentially reportable to the NDIS Commission',
+      type: 'checkbox',
+      required: true,
+      pii: false,
+      section: 'incident_details',
+      help: 'Death, serious injury, abuse or neglect, unlawful contact or assault, sexual misconduct, unauthorised restrictive practice.',
+    },
+    // ── People involved ──
+    {
+      key: 'participant_name',
+      label: 'Participant name',
+      type: 'text',
+      required: true,
+      pii: true,
+      section: 'people_involved',
+    },
+    {
+      key: 'participant_ndis_number',
+      label: 'NDIS participant number',
+      type: 'text',
+      required: false,
+      pii: true,
+      section: 'people_involved',
+    },
+    {
+      key: 'participant_dob',
+      label: 'Participant date of birth',
+      type: 'date',
+      required: false,
+      pii: true,
+      section: 'people_involved',
+    },
+    {
+      key: 'staff_involved',
+      label: 'Staff involved (names and roles)',
+      type: 'textarea',
+      required: true,
+      pii: true,
+      section: 'people_involved',
+    },
+    {
+      key: 'witnesses',
+      label: 'Witnesses',
+      type: 'textarea',
+      required: false,
+      pii: true,
+      section: 'people_involved',
+    },
+    {
+      key: 'reported_by_name',
+      label: 'Report completed by',
+      type: 'text',
+      required: true,
+      pii: true,
+      section: 'people_involved',
+    },
+    {
+      key: 'reported_by_role',
+      label: 'Role of reporter',
+      type: 'text',
+      required: true,
+      pii: false,
+      section: 'people_involved',
+    },
+    // ── Description ──
+    {
+      key: 'what_happened',
+      label: 'What happened',
+      type: 'textarea',
+      required: true,
+      pii: false,
+      section: 'incident_description',
+      help: 'Chronological, factual account. Include what led up to the incident.',
+    },
+    {
+      key: 'injuries_sustained',
+      label: 'Injuries sustained',
+      type: 'textarea',
+      required: false,
+      pii: false,
+      section: 'incident_description',
+    },
+    {
+      key: 'participant_account',
+      label: "Participant's account (their own words where possible)",
+      type: 'textarea',
+      required: false,
+      pii: false,
+      section: 'incident_description',
+    },
+    // ── Immediate response ──
+    {
+      key: 'immediate_actions',
+      label: 'Immediate actions taken',
+      type: 'textarea',
+      required: true,
+      pii: false,
+      section: 'immediate_response',
+    },
+    {
+      key: 'first_aid_provided',
+      label: 'First aid provided',
+      type: 'checkbox',
+      required: false,
+      pii: false,
+      section: 'immediate_response',
+    },
+    {
+      key: 'medical_attention',
+      label: 'Medical attention sought',
+      type: 'select',
+      required: false,
+      pii: false,
+      section: 'immediate_response',
+      options: ['None required', 'GP', 'Ambulance called', 'Hospital admission', 'Other'],
+    },
+    {
+      key: 'participant_supported',
+      label: 'How the participant was supported afterwards',
+      type: 'textarea',
+      required: false,
+      pii: false,
+      section: 'immediate_response',
+    },
+    // ── Restrictive practice (conditional) ──
+    {
+      key: 'restrictive_practice_used',
+      label: 'Was a restrictive practice used?',
+      type: 'checkbox',
+      required: true,
+      pii: false,
+      section: 'restrictive_practice',
+    },
+    {
+      key: 'restrictive_practice_type',
+      label: 'Type of restrictive practice',
+      type: 'select',
+      required: false,
+      pii: false,
+      section: 'restrictive_practice',
+      options: [
+        'Physical restraint',
+        'Mechanical restraint',
+        'Chemical restraint',
+        'Environmental restraint',
+        'Seclusion',
+      ],
+      conditional: { field: 'restrictive_practice_used', equals: 'true' },
+    },
+    {
+      key: 'restrictive_practice_authorised',
+      label: 'Was the use in accordance with a behaviour support plan / authorisation?',
+      type: 'checkbox',
+      required: false,
+      pii: false,
+      section: 'restrictive_practice',
+      conditional: { field: 'restrictive_practice_used', equals: 'true' },
+      help: 'Unauthorised use is reportable to the NDIS Commission within 5 business days.',
+    },
+    {
+      key: 'restrictive_practice_duration',
+      label: 'Duration and de-escalation attempted',
+      type: 'textarea',
+      required: false,
+      pii: false,
+      section: 'restrictive_practice',
+      conditional: { field: 'restrictive_practice_used', equals: 'true' },
+    },
+    // ── Notifications ──
+    {
+      key: 'family_notified',
+      label: 'Family / guardian notified',
+      type: 'checkbox',
+      required: false,
+      pii: false,
+      section: 'notifications',
+    },
+    {
+      key: 'supervisor_notified',
+      label: 'Supervisor / on-call manager notified',
+      type: 'checkbox',
+      required: true,
+      pii: false,
+      section: 'notifications',
+    },
+    {
+      key: 'police_notified',
+      label: 'Police notified',
+      type: 'checkbox',
+      required: false,
+      pii: false,
+      section: 'notifications',
+    },
+    {
+      key: 'other_notifications',
+      label: 'Other notifications made',
+      type: 'textarea',
+      required: false,
+      pii: false,
+      section: 'notifications',
+    },
+    // ── Follow-up ──
+    {
+      key: 'contributing_factors',
+      label: 'Contributing factors',
+      type: 'textarea',
+      required: false,
+      pii: false,
+      section: 'follow_up',
+    },
+    {
+      key: 'prevention_actions',
+      label: 'Actions to prevent recurrence',
+      type: 'textarea',
+      required: false,
+      pii: false,
+      section: 'follow_up',
+    },
+    {
+      key: 'behaviour_support_review',
+      label: 'Behaviour support plan review required',
+      type: 'checkbox',
+      required: false,
+      pii: false,
+      section: 'follow_up',
+    },
+  ],
+};

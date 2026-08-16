@@ -1,8 +1,8 @@
 import { prisma } from '@horus/db';
 import { PageHeader, Panel, Pill, StatCard } from '@/components/app/shell';
 import { Reveal } from '@/components/motion';
-import { Button } from '@/components/ui/button';
 import { requireTenantMember } from '@/lib/tenant-context';
+import { UploadDocumentsButton } from './upload-button';
 
 export const metadata = { title: 'Documents · Horus' };
 export const dynamic = 'force-dynamic';
@@ -30,15 +30,7 @@ export default async function DocumentsPage({ params }: { params: Promise<{ tena
         eyebrow="Documents"
         title="The knowledge this workspace runs on."
         description="Every document here is chunked, embedded, and indexed for retrieval. Agents cite them by passage."
-        actions={
-          <Button
-            size="sm"
-            disabled
-            title="Workspace ingestion lands next — the playground pipeline is the engine"
-          >
-            Upload documents
-          </Button>
-        }
+        actions={<UploadDocumentsButton slug={slug} />}
       />
 
       <div className="reveal-stagger grid gap-4 md:grid-cols-4">
@@ -54,9 +46,9 @@ export default async function DocumentsPage({ params }: { params: Promise<{ tena
             <div className="py-8 text-center">
               <p className="text-ink text-[15px] font-medium">No documents yet.</p>
               <p className="text-ink-faded mx-auto mt-1.5 max-w-md text-[13.5px] leading-relaxed">
-                Workspace ingestion is the next milestone — the same crawl → chunk → embed → index
-                pipeline that already runs live in the playground, pointed at your own documents
-                with permanent storage.
+                Upload a PDF and it runs the same chunk → embed → index pipeline as the playground,
+                into this workspace's permanent partition. The workspace agent cites it by passage
+                from that moment on.
               </p>
             </div>
           ) : (

@@ -72,6 +72,12 @@ variable "embedding_capacity" {
   default     = 50
 }
 
+variable "deploy_realtime" {
+  description = "Deploy the realtime speech-to-speech model. Off for regional accounts (e.g. australiaeast) that carry document workloads but not voice — realtime ships to a handful of regions only."
+  type        = bool
+  default     = true
+}
+
 variable "realtime_model_name" {
   description = "Realtime speech-to-speech model for full-duplex voice."
   type        = string

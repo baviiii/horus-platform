@@ -11,6 +11,8 @@ import { adminRouter } from './admin.js';
 import { billingRouter } from './billing.js';
 import { tenantRouter } from './tenant.js';
 import { connectionsRouter } from './connections.js';
+import { incidentsRouter } from './incidents.js';
+import { careersRouter } from './careers.js';
 
 export const appRouter = router({
   health: healthRouter,
@@ -25,6 +27,9 @@ export const appRouter = router({
   admin: adminRouter,
   billing: billingRouter,
   connections: connectionsRouter,
+  incidents: incidentsRouter,
+  // Vertical module — careers-shaped reads over the shared graph.
+  careers: careersRouter,
 });
 
 export type AppRouter = typeof appRouter;

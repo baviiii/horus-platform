@@ -38,7 +38,10 @@ export const documentsRouter = router({
     .mutation(async () => {
       // Returns a signed Azure Blob upload URL + creates a PENDING document row.
       // Implementation lands in Phase 1.
-      throw new TRPCError({ code: 'NOT_IMPLEMENTED', message: 'documents.requestUpload — Phase 1' });
+      throw new TRPCError({
+        code: 'NOT_IMPLEMENTED',
+        message: 'documents.requestUpload — Phase 1',
+      });
     }),
 
   delete: scopedProcedure('documents:write')

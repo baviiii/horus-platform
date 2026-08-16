@@ -19,5 +19,12 @@ resource "azurerm_search_service" "main" {
 
   public_network_access_enabled = true
 
+  # Indexers authenticate to blob storage and to the Foundry resource that
+  # bills skillset execution as this identity — keyless, so no connection
+  # strings end up inside data-source or skillset definitions.
+  identity {
+    type = "SystemAssigned"
+  }
+
   tags = var.tags
 }
