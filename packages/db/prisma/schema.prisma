@@ -65,6 +65,9 @@ model Tenant {
   incidents         Incident[]
   incidentEvidence  IncidentEvidence[]
   incidentEvents    IncidentEvent[]
+  knowledgeCollections KnowledgeCollection[]
+  agents           Agent[]
+  automations      Automation[]
 
   @@index([slug])
   @@index([customDomain])
@@ -143,6 +146,7 @@ enum DocStatus {
 model Document {
   id           String    @id @default(uuid()) @db.Uuid
   tenantId     String    @db.Uuid
+  collectionId String?   @db.Uuid
   title        String
   category     String?
   tags         String[]  @default([])
@@ -160,12 +164,14 @@ model Document {
   updatedAt    DateTime  @updatedAt
   indexedAt    DateTime?
 
-  tenant   Tenant           @relation(fields: [tenantId], references: [id], onDelete: Cascade)
-  chunks   Chunk[]
-  entities DocumentEntity[]
+  tenant     Tenant               @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  collection KnowledgeCollection? @relation(fields: [collectionId], references: [id], onDelete: SetNull)
+  chunks     Chunk[]
+  entities   DocumentEntity[]
 
   @@index([tenantId, status])
   @@index([tenantId, category])
+  @@index([collectionId])
   @@map("documents")
 }
 
@@ -625,4 +631,114 @@ model IncidentEvent {
 
   @@index([tenantId, incidentId, createdAt])
   @@map("incident_events")
+}
+
+// =============================================================================
+// Customer portal — knowledge collections, agents, automations
+//
+// A tenant's self-serve surface. Collections group documents into named
+// knowledge silos; Agents bind a collection (plus optional MCP connections)
+// to a chat or voice persona; Automations are simple trigger → action rules
+// over tenant data. All of it is tenant-scoped and RLS-enforced like the
+// rest of the platform.
+// =============================================================================
+
+model KnowledgeCollection {
+  id          String   @id @default(uuid()) @db.Uuid
+  tenantId    String   @db.Uuid
+  name        String
+  slug        String // url-safe handle, unique per tenant
+  description String?
+  // Search partition this collection indexes into. Defaults to its slug.
+  partition   String?
+  // Optional source tagging: category filter applied when searching.
+  category    String?
+  isDefault   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant    Tenant    @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  documents Document[]
+
+  @@unique([tenantId, slug])
+  @@index([tenantId])
+  @@map("knowledge_collections")
+}
+
+enum AgentKind {
+  CHAT // text chat inside the portal + embeddable widget
+  VOICE // voice surface (WebRTC / PSTN) — config lives on configJson
+  HYBRID // both
+}
+
+enum AgentStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+model Agent {
+  id          String      @id @default(uuid()) @db.Uuid
+  tenantId    String      @db.Uuid
+  name        String
+  slug        String
+  kind        AgentKind   @default(CHAT)
+  status      AgentStatus @default(DRAFT)
+  // System prompt / persona for the agent.
+  persona     String?
+  // Which collections ground this agent. Empty = whole tenant workspace.
+  collectionIds String[]  @default([])
+  // Which MCP connection slugs the agent may call.
+  toolSlugs     String[]  @default([])
+  // Voice config when kind=VOICE|HYBRID: { voice, language, providerRef, ... }.
+  voiceConfig   Json      @default("{}")
+  // UI / embed config: { greeting, theme, allowedOrigins, ... }.
+  embedConfig   Json      @default("{}")
+  createdById String    @db.Uuid
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@unique([tenantId, slug])
+  @@index([tenantId, status])
+  @@map("agents")
+}
+
+enum AutomationTrigger {
+  DOCUMENT_INDEXED // a document finishes ingestion
+  CHAT_SESSION_ENDED // a portal chat session closes
+  SCHEDULE // cron-like schedule stored in config
+  WEBHOOK // inbound webhook from an external system
+}
+
+enum AutomationStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+}
+
+model Automation {
+  id          String            @id @default(uuid()) @db.Uuid
+  tenantId    String            @db.Uuid
+  name        String
+  description String?
+  trigger     AutomationTrigger
+  status      AutomationStatus  @default(DRAFT)
+  // Trigger-specific config: { cron, category, agentId, webhookSecretRef, ... }.
+  triggerConfig Json @default("{}")
+  // Action descriptor: { kind: 'webhook' | 'alert' | 'email' | 'infer', config: {...} }.
+  action      Json
+  lastRunAt   DateTime?
+  lastError   String?
+  runCount    Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId, status])
+  @@index([tenantId, trigger])
+  @@map("automations")
 }

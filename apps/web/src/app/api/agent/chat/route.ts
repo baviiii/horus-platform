@@ -62,6 +62,8 @@ const PostSchema = z.object({
   sessionId: z.string().uuid().optional(),
   message: z.string().min(1).max(8000),
   model: z.enum(['fast', 'deep']).default('fast'),
+  /** Optional agent slug — when present, the agent's persona + collection scope apply. */
+  agent: z.string().min(1).max(80).optional(),
 });
 
 export async function POST(req: Request) {
@@ -80,6 +82,50 @@ export async function POST(req: Request) {
   const auth = await requireMember(parsed.data.tenant);
   if ('error' in auth) return auth.error;
   const { tenant, user } = auth;
+
+  // Resolve the agent (if any) — it shapes persona, partition, and session context.
+  let agentRow: {
+    id: string;
+    name: string;
+    slug: string;
+    persona: string | null;
+    collectionIds: string[];
+    status: string;
+  } | null = null;
+  if (parsed.data.agent) {
+    agentRow = await prisma.agent.findUnique({
+      where: { tenantId_slug: { tenantId: tenant.id, slug: parsed.data.agent } },
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        persona: true,
+        collectionIds: true,
+        status: true,
+      },
+    });
+    if (!agentRow || agentRow.status !== 'ACTIVE') {
+      return Response.json({ error: 'Unknown or inactive agent' }, { status: 404 });
+    }
+  }
+  // Partition: always "workspace" — the search index is one shared space.
+  // Collection scoping happens via sourceIds filter, not partition switching.
+  const partition = WORKSPACE_PARTITION;
+  const sessionContext = agentRow ? `agent:${agentRow.slug}` : 'workspace-agent';
+
+  // Resolve the agent's collections to document sourceIds for retrieval scoping.
+  let scopedSourceIds: string[] | undefined;
+  if (agentRow && agentRow.collectionIds.length > 0) {
+    const docs = await prisma.document.findMany({
+      where: { tenantId: tenant.id, collectionId: { in: agentRow.collectionIds } },
+      select: { metadata: true },
+    });
+    const sourceIds = docs
+      .map((d) => (d.metadata as { sourceId?: string })?.sourceId)
+      .filter((id): id is string => typeof id === 'string');
+    // Empty result means the collections have no documents — search nothing.
+    scopedSourceIds = sourceIds.length > 0 ? sourceIds : ['__no_documents__'];
+  }
 
   const verdict = await moderateText(message);
   if (verdict.blocked) {
@@ -102,7 +148,7 @@ export async function POST(req: Request) {
         tenantId: tenant.id,
         userId: user.id,
         title: message.slice(0, 80),
-        context: 'workspace-agent',
+        context: sessionContext,
       },
     });
   }
@@ -142,12 +188,14 @@ export async function POST(req: Request) {
       await runKnowledgeAgent({
         indexName: indexName(),
         tenantId: tenant.id,
-        sessionId: WORKSPACE_PARTITION,
+        sessionId: partition,
         messages: history.map((m) => ({
           role: m.role === 'USER' ? ('user' as const) : ('assistant' as const),
           content: m.content,
         })),
         model,
+        ...(agentRow?.persona && { persona: agentRow.persona, personaName: agentRow.name }),
+        ...(scopedSourceIds && { sourceIds: scopedSourceIds }),
         mcpServers,
         emit,
         signal: req.signal,

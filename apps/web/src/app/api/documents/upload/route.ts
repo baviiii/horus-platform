@@ -36,6 +36,7 @@ export async function POST(req: Request) {
 
   const slug = String(form.get('tenant') ?? '');
   const category = form.get('category') ? String(form.get('category')).slice(0, 60) : null;
+  const collectionId = form.get('collectionId') ? String(form.get('collectionId')) : undefined;
   const file = form.get('file');
   if (!slug || !(file instanceof File)) {
     return Response.json({ error: 'Missing tenant or file' }, { status: 400 });
@@ -65,6 +66,7 @@ export async function POST(req: Request) {
   const doc = await prisma.document.create({
     data: {
       tenantId: auth.tenant.id,
+      ...(collectionId && { collectionId }),
       title: file.name.replace(/\.pdf$/i, ''),
       category,
       blobUrl: blobUrl ?? `pdf:${file.name}`,

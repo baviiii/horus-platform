@@ -52,8 +52,14 @@ export interface RunAgentParams {
   signal?: AbortSignal;
   model?: ModelTier;
   topK?: number;
+  /** Optional persona injected as additional instructions (customer-facing agents). */
+  persona?: string;
+  /** Optional agent display name, used with persona. */
+  personaName?: string;
   /** Tenant-connected MCP tool servers; their tools attach to this run. */
   mcpServers?: McpServerRef[];
+  /** Restrict retrieval to these sourceIds (collection-scoped agents). */
+  sourceIds?: string[];
 }
 
 const AGENT_NAME = 'horus-knowledge-agent';
@@ -74,10 +80,13 @@ Rules:
 async function describeSources(scope: ToolScope): Promise<string> {
   try {
     const sources = await listSessionSources(scope.indexName, scope.tenantId, scope.sessionId);
-    if (sources.length === 0) {
-      return 'Connected sources: none yet. If the user asks a factual question, still try search_knowledge once, then tell them to connect a website or PDF.';
+    const scoped = scope.sourceIds
+      ? sources.filter((s) => scope.sourceIds!.includes(s.sourceId))
+      : sources;
+    if (scoped.length === 0) {
+      return 'Connected sources: none in the assigned collections. If the user asks a factual question, still try search_knowledge once, then tell them no documents are assigned to this agent yet.';
     }
-    const lines = sources
+    const lines = scoped
       .map(
         (s) =>
           `- ${s.title || s.sourceUrl} (${s.sourceType === 'url' ? s.sourceUrl : 'uploaded PDF'}, ${s.chunkCount} chunks)`,
@@ -187,6 +196,7 @@ export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
     tenantId: params.tenantId,
     sessionId: params.sessionId,
     topK: params.topK ?? 8,
+    ...(params.sourceIds && { sourceIds: params.sourceIds }),
   };
   const registry = new CitationRegistry();
   let toolCallBudget = MAX_TOOL_CALLS;
@@ -197,12 +207,16 @@ export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
       ? `\n\nConnected tool servers: ${mcp.labels.join(', ')}. Use their tools directly whenever the user asks for those capabilities (coaching, interviews, planning, ...) — do not describe what you would do, call the tool.`
       : '';
 
+  const personaNote = params.persona
+    ? `\n\nYou are ${params.personaName ?? 'an assistant'}. ${params.persona}`
+    : '';
+
   const thread = await client.threads.create({ abortSignal: signal });
   try {
     let response = client.runs.create(thread.id, agent.id, {
       abortSignal: signal,
       model: deployment === agent.model ? undefined : deployment,
-      additionalInstructions: (await describeSources(scope)) + mcpNote,
+      additionalInstructions: (await describeSources(scope)) + mcpNote + personaNote,
       additionalMessages: params.messages.map((m) => ({ role: m.role, content: m.content })),
       // Tool list override: base tools + this tenant's MCP tools for this run.
       tools: mcp && mcp.tools.length > 0 ? [...buildAgentTools(), ...mcp.tools] : undefined,

@@ -14,7 +14,7 @@ import { createSupabaseServerClient } from '@/lib/supabase/server';
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
-  const next = url.searchParams.get('next') ?? '/';
+  const next = url.searchParams.get('next') ?? '/workspaces';
 
   // Provider-side failure (user cancelled, provider misconfigured, etc.).
   const oauthError = url.searchParams.get('error_description') ?? url.searchParams.get('error');

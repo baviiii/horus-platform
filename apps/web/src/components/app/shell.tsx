@@ -23,6 +23,12 @@ export type NavGroup = {
   items: NavItem[];
 };
 
+export type TenantMembership = {
+  slug: string;
+  name: string;
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'VIEWER';
+};
+
 export function AppShell({
   children,
   brand,
@@ -30,6 +36,8 @@ export function AppShell({
   user,
   context,
   invert = true,
+  memberships,
+  activeSlug,
 }: {
   children: React.ReactNode;
   brand: { name: string; href: string; tag?: string };
@@ -37,11 +45,21 @@ export function AppShell({
   user: { name: string; email: string; initials: string };
   context?: React.ReactNode;
   invert?: boolean;
+  /** All tenants this user is a member of — powers the sidebar switcher. */
+  memberships?: TenantMembership[];
+  /** Slug of the tenant currently being viewed. */
+  activeSlug?: string;
 }) {
   return (
     <div className={cn('relative min-h-screen', invert && 'dark')}>
       <div className="bg-paper text-ink min-h-screen">
-        <Sidebar brand={brand} groups={groups} user={user} />
+        <Sidebar
+          brand={brand}
+          groups={groups}
+          user={user}
+          memberships={memberships}
+          activeSlug={activeSlug}
+        />
         <div className="lg:pl-[244px]">
           <Topbar brand={brand} context={context} />
           <main className="px-6 py-8 md:px-10 md:py-10">{children}</main>
@@ -55,12 +73,31 @@ function Sidebar({
   brand,
   groups,
   user,
+  memberships,
+  activeSlug,
 }: {
   brand: { name: string; href: string; tag?: string };
   groups: NavGroup[];
   user: { name: string; email: string; initials: string };
+  memberships?: TenantMembership[];
+  activeSlug?: string;
 }) {
   const pathname = usePathname();
+  const [switcherOpen, setSwitcherOpen] = React.useState(false);
+  const switcherRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    function onDocClick(e: MouseEvent) {
+      if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
+        setSwitcherOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
+  }, []);
+
+  const activeMembership = memberships?.find((m) => m.slug === activeSlug);
+
   return (
     <aside className="border-hairline bg-paper-soft fixed inset-y-0 left-0 z-30 hidden w-[244px] flex-col border-r lg:flex">
       <div className="px-5 pb-5 pt-6">
@@ -77,6 +114,108 @@ function Sidebar({
           </div>
         )}
       </div>
+
+      {memberships && memberships.length > 0 && (
+        <div className="relative px-3 pb-2" ref={switcherRef}>
+          <button
+            type="button"
+            onClick={() => setSwitcherOpen((v) => !v)}
+            className={cn(
+              'border-hairline bg-paper hover:border-hairline-strong group flex w-full items-center gap-2.5 rounded-xl border px-3 py-2 text-left transition-colors',
+              switcherOpen && 'border-accent/40 ring-accent/10 ring-2',
+            )}
+          >
+            <span className="bg-accent/10 text-accent grid h-6 w-6 shrink-0 place-items-center rounded-md text-[11px] font-semibold">
+              {(activeMembership?.name ?? '?').slice(0, 2).toUpperCase()}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="text-ink block truncate text-[12.5px] font-medium">
+                {activeMembership?.name ?? 'Select workspace'}
+              </span>
+              <span className="text-ink-mute block text-[10.5px]">
+                {activeMembership?.role.toLowerCase() ?? ''}
+              </span>
+            </span>
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              className={cn(
+                'text-ink-mute shrink-0 transition-transform',
+                switcherOpen && 'rotate-180',
+              )}
+            >
+              <path
+                d="M3 4.5l3 3 3-3"
+                stroke="currentColor"
+                strokeWidth="1.3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+          </button>
+
+          {switcherOpen && (
+            <div className="border-hairline bg-paper shadow-blue-lg absolute inset-x-3 top-full z-40 mt-1 overflow-hidden rounded-xl border py-1">
+              <div className="text-ink-mute px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em]">
+                Workspaces
+              </div>
+              <ul>
+                {memberships.map((m) => {
+                  const active = m.slug === activeSlug;
+                  return (
+                    <li key={m.slug}>
+                      <Link
+                        href={`/t/${m.slug}`}
+                        onClick={() => setSwitcherOpen(false)}
+                        className={cn(
+                          'flex items-center gap-2.5 px-3 py-2 text-[12.5px] transition-colors',
+                          active
+                            ? 'bg-paper-soft text-ink'
+                            : 'text-ink-faded hover:bg-paper-soft hover:text-ink',
+                        )}
+                      >
+                        <span
+                          className={cn(
+                            'grid h-6 w-6 shrink-0 place-items-center rounded-md text-[10.5px] font-semibold',
+                            active ? 'bg-accent text-accent-ink' : 'bg-paper-deep text-ink-faded',
+                          )}
+                        >
+                          {m.name.slice(0, 2).toUpperCase()}
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate font-medium">{m.name}</span>
+                          <span className="text-ink-mute block text-[10.5px]">
+                            {m.role.toLowerCase()}
+                          </span>
+                        </span>
+                        {active && (
+                          <svg
+                            width="12"
+                            height="12"
+                            viewBox="0 0 12 12"
+                            fill="none"
+                            className="text-accent shrink-0"
+                          >
+                            <path
+                              d="M2.5 6.5l2.5 2.5 4.5-5"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        )}
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+          )}
+        </div>
+      )}
 
       <nav className="flex-1 space-y-6 overflow-y-auto px-3 pb-4">
         {groups.map((group, gi) => (

@@ -128,6 +128,8 @@ export interface ToolScope {
   tenantId: string;
   sessionId: string;
   topK: number;
+  /** Restrict retrieval to these sourceIds (collection-scoped agents). */
+  sourceIds?: string[];
 }
 
 const PASSAGE_CHARS = 800;
@@ -146,6 +148,7 @@ export async function executeSearchKnowledge(
     query,
     vector,
     top: scope.topK,
+    ...(scope.sourceIds && { filters: { sourceIds: scope.sourceIds } }),
   });
 
   if (hits.length === 0) {

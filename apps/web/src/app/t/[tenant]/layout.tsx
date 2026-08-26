@@ -1,4 +1,4 @@
-import { AppShell, type NavGroup } from '@/components/app/shell';
+import { AppShell, type NavGroup, type TenantMembership } from '@/components/app/shell';
 import { prisma } from '@horus/db';
 import { requireTenantMember } from '@/lib/tenant-context';
 
@@ -17,7 +17,7 @@ export default async function TenantLayout({
   };
   const tenantName = branding.name || tenant.name;
 
-  const [openAlerts, overdueIncidents] = await Promise.all([
+  const [openAlerts, overdueIncidents, myMemberships] = await Promise.all([
     prisma.alert.count({
       where: { tenantId: tenant.id, status: 'OPEN' },
     }),
@@ -28,22 +28,48 @@ export default async function TenantLayout({
         notifyDueAt: { lt: new Date() },
       },
     }),
+    prisma.tenantMember.findMany({
+      where: { userId: user.id, tenant: { isActive: true } },
+      include: { tenant: { select: { slug: true, name: true } } },
+      orderBy: { joinedAt: 'asc' },
+    }),
   ]);
+
+  const memberships: TenantMembership[] = myMemberships.map((m) => ({
+    slug: m.tenant.slug,
+    name: m.tenant.name,
+    role: m.role,
+  }));
 
   const groups: NavGroup[] = [
     {
       items: [
         { href: `/t/${slug}`, label: 'Overview', icon: <IconHome /> },
         { href: `/t/${slug}/chat`, label: 'Chat', icon: <IconChat /> },
+      ],
+    },
+    {
+      title: 'Customer portal',
+      items: [
+        { href: `/t/${slug}/knowledge`, label: 'Knowledge', icon: <IconLibrary /> },
+        { href: `/t/${slug}/agents`, label: 'Agents', icon: <IconBot /> },
+        { href: `/t/${slug}/automations`, label: 'Automations', icon: <IconZap /> },
+        { href: `/t/${slug}/usage`, label: 'Usage', icon: <IconGauge /> },
+        { href: `/t/${slug}/portal`, label: 'End-user portal', icon: <IconGlobe /> },
+      ],
+    },
+    {
+      title: 'Intelligence',
+      items: [
         { href: `/t/${slug}/documents`, label: 'Documents', icon: <IconDoc /> },
+        { href: `/t/${slug}/intelligence`, label: 'Intelligence', icon: <IconIntel /> },
+        { href: `/t/${slug}/graph`, label: 'Knowledge graph', icon: <IconGraph /> },
         {
           href: `/t/${slug}/incidents`,
           label: 'Incidents',
           icon: <IconIncident />,
           ...(overdueIncidents > 0 && { badge: String(overdueIncidents) }),
         },
-        { href: `/t/${slug}/intelligence`, label: 'Intelligence', icon: <IconIntel /> },
-        { href: `/t/${slug}/graph`, label: 'Knowledge graph', icon: <IconGraph /> },
         { href: `/t/${slug}/connections`, label: 'Connections', icon: <IconPlug /> },
         {
           href: `/t/${slug}/alerts`,
@@ -55,12 +81,7 @@ export default async function TenantLayout({
     },
     {
       title: 'Workspace',
-      items: [
-        { href: `/t/${slug}/settings`, label: 'Settings', icon: <IconCog /> },
-        { href: `/t/${slug}/settings/members`, label: 'Members', icon: <IconPeople /> },
-        { href: `/t/${slug}/settings/keys`, label: 'API keys', icon: <IconKey /> },
-        { href: `/t/${slug}/settings/billing`, label: 'Billing', icon: <IconBill /> },
-      ],
+      items: [{ href: `/t/${slug}/settings`, label: 'Settings', icon: <IconCog /> }],
     },
   ];
 
@@ -73,6 +94,8 @@ export default async function TenantLayout({
         email: user.email,
         initials: user.initials,
       }}
+      memberships={memberships}
+      activeSlug={slug}
       context={
         <nav className="text-ink-faded flex items-center gap-1.5 text-[13px]">
           <span className="text-ink-mute">Workspace</span>
@@ -254,6 +277,69 @@ function IconBill() {
         strokeWidth="1.4"
       />
       <path d="M2.5 7h11M5 10h2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+    </Icon>
+  );
+}
+function IconLibrary() {
+  return (
+    <Icon>
+      <path
+        d="M3 3.5h3.5a2 2 0 012 2v8a1.5 1.5 0 00-1.5-1.5H3zM13 3.5H9.5a2 2 0 00-2 2v8a1.5 1.5 0 011.5-1.5H13z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </Icon>
+  );
+}
+function IconBot() {
+  return (
+    <Icon>
+      <rect x="3.5" y="5.5" width="9" height="7" rx="2" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M8 2.5v3M6 9h.5M9.5 9h.5M5.5 15v-2M10.5 15v-2"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+    </Icon>
+  );
+}
+function IconZap() {
+  return (
+    <Icon>
+      <path
+        d="M8.5 1.5L2.5 9h4l-1 5.5L11.5 7h-4l1-5.5z"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinejoin="round"
+      />
+    </Icon>
+  );
+}
+function IconGauge() {
+  return (
+    <Icon>
+      <path
+        d="M2.5 12.5a5.5 5.5 0 1111 0M8 12.5l2.8-3.8"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </Icon>
+  );
+}
+function IconGlobe() {
+  return (
+    <Icon>
+      <circle cx="8" cy="8" r="5.5" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M2.5 8h11M8 2.5c-1.5 1.5-2 3.4-2 5.5s.5 4 2 5.5M8 2.5c1.5 1.5 2 3.4 2 5.5s-.5 4-2 5.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
     </Icon>
   );
 }

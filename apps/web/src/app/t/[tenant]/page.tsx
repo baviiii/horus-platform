@@ -64,10 +64,19 @@ export default async function TenantOverview({ params }: { params: Promise<{ ten
         actions={
           <>
             <Link
-              href={`/t/${slug}/documents`}
-              className="border-hairline-strong bg-paper text-ink hover:bg-paper-soft inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-[13px] font-medium transition-colors"
+              href={`/t/${slug}/portal`}
+              className="border-accent/30 bg-accent/5 text-accent hover:bg-accent/10 inline-flex h-9 items-center gap-1.5 rounded-full border px-4 text-[13px] font-medium transition-colors"
             >
-              Documents
+              <svg width="13" height="13" viewBox="0 0 13 13" fill="none">
+                <circle cx="6.5" cy="6.5" r="4.5" stroke="currentColor" strokeWidth="1.3" />
+                <path
+                  d="M2 6.5h9M6.5 2c-1.2 1.2-1.7 2.8-1.7 4.5s.5 3.3 1.7 4.5M6.5 2c1.2 1.2 1.7 2.8 1.7 4.5s-.5 3.3-1.7 4.5"
+                  stroke="currentColor"
+                  strokeWidth="1.3"
+                  strokeLinecap="round"
+                />
+              </svg>
+              Open end-user portal
             </Link>
             <Link
               href={`/t/${slug}/chat`}
