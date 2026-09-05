@@ -45,15 +45,45 @@ variable "chat_model" {
 }
 
 variable "chat_capacity" {
-  description = "Chat deployment capacity in thousands of TPM (GlobalStandard pool)."
+  description = "Chat deployment capacity in thousands of TPM."
   type        = number
   default     = 50
 }
 
-variable "realtime_model" {
-  description = "Realtime speech-to-speech model for full-duplex voice (mini tier: open-access playground cost profile)."
+variable "chat_sku_name" {
+  description = <<-EOT
+    Chat deployment SKU. GlobalStandard is a pooled global capacity model;
+    Standard is regional. New and credit-based subscriptions frequently carry
+    ZERO GlobalStandard quota while having plenty of Standard — verify with
+    `az cognitiveservices usage list -l <region>` before changing this.
+    Standard also keeps inference in-region, which suits AU data residency.
+  EOT
   type        = string
-  default     = "gpt-realtime-2.1-mini"
+  default     = "Standard"
+}
+
+variable "embedding_sku_name" {
+  description = "Embedding deployment SKU. Same quota caveat as chat_sku_name."
+  type        = string
+  default     = "Standard"
+}
+
+variable "realtime_model" {
+  description = <<-EOT
+    Realtime speech-to-speech model for full-duplex voice (mini tier: open-access
+    playground cost profile). Realtime quota is granted per exact model name and
+    measured in Requests Per Minute — `gpt-realtime-2.1-mini` carries 0 on this
+    subscription while `gpt-realtime-mini` carries 40. Check with
+    `az cognitiveservices usage list -l <region>` before changing.
+  EOT
+  type        = string
+  default     = "gpt-realtime-mini"
+}
+
+variable "realtime_model_version" {
+  description = "Realtime model version — must match the model name; the deployments API rejects null for newer models."
+  type        = string
+  default     = "2025-12-15"
 }
 
 variable "deploy_bing_grounding" {

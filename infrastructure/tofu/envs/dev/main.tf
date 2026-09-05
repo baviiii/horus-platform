@@ -30,10 +30,13 @@ module "foundry" {
   name_prefix         = local.name_prefix
   tags                = local.common_tags
 
-  chat_model_name       = var.chat_model
-  chat_capacity         = var.chat_capacity
-  realtime_model_name   = var.realtime_model
-  deploy_bing_grounding = var.deploy_bing_grounding
+  chat_model_name        = var.chat_model
+  chat_capacity          = var.chat_capacity
+  chat_sku_name          = var.chat_sku_name
+  embedding_sku_name     = var.embedding_sku_name
+  realtime_model_name    = var.realtime_model
+  realtime_model_version = var.realtime_model_version
+  deploy_bing_grounding  = var.deploy_bing_grounding
 
   developer_principal_ids = [data.azurerm_client_config.current.object_id]
 }
@@ -69,8 +72,10 @@ module "foundry_au" {
   name_prefix         = "${local.name_prefix}-au"
   tags                = merge(local.common_tags, { data_residency = "australia" })
 
-  chat_model_name = var.chat_model
-  chat_capacity   = var.chat_capacity
+  chat_model_name    = var.chat_model
+  chat_capacity      = var.chat_capacity
+  chat_sku_name      = var.chat_sku_name
+  embedding_sku_name = var.embedding_sku_name
   # Voice lives in the primary account only.
   deploy_realtime       = false
   deploy_bing_grounding = false
