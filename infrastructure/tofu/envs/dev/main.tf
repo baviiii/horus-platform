@@ -32,6 +32,7 @@ module "foundry" {
 
   chat_model_name        = var.chat_model
   chat_capacity          = var.chat_capacity
+  chat_model_version     = var.chat_model_version
   chat_sku_name          = var.chat_sku_name
   embedding_sku_name     = var.embedding_sku_name
   realtime_model_name    = var.realtime_model
@@ -74,6 +75,7 @@ module "foundry_au" {
 
   chat_model_name    = var.chat_model
   chat_capacity      = var.chat_capacity
+  chat_model_version = var.chat_model_version
   chat_sku_name      = var.chat_sku_name
   embedding_sku_name = var.embedding_sku_name
   # Voice lives in the primary account only.

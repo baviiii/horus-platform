@@ -50,6 +50,16 @@ variable "chat_capacity" {
   default     = 50
 }
 
+variable "chat_model_version" {
+  description = <<-EOT
+    Chat model version. Leaving this null lets Azure pick a default and then
+    write it back, which shows up as permanent `version -> null` drift on every
+    plan. Pin it so the config matches what is actually deployed.
+  EOT
+  type        = string
+  default     = "2024-11-20"
+}
+
 variable "chat_sku_name" {
   description = <<-EOT
     Chat deployment SKU. GlobalStandard is a pooled global capacity model;
