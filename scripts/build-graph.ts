@@ -9,7 +9,7 @@
  *
  * Usage:
  *   pnpm exec tsx scripts/build-graph.ts [--only <manifest-id-substr>]
- *     [--limit N] [--batch 5] [--max-batches 40] [--deep]
+ *     [--limit N] [--batch 5] [--max-batches 40] [--concurrency 4] [--deep]
  */
 import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -77,6 +77,8 @@ async function main() {
   const limit = Number(arg('--limit') ?? Infinity);
   const batchSize = Number(arg('--batch') ?? 5);
   const maxBatches = Number(arg('--max-batches') ?? 40);
+  /** Concurrent extraction calls. 4 × ~5k tokens sits well inside a 50k TPM deployment. */
+  const concurrency = Math.max(1, Number(arg('--concurrency') ?? 4));
   const tier = process.argv.includes('--deep') ? ('deep' as const) : ('fast' as const);
   // `careers` reads documents as a pathway map (occupation/skill/qualification)
   // rather than as budget intelligence. Both profiles feed one graph.
@@ -90,7 +92,7 @@ async function main() {
   const { extractGraphFromChunks, persistGraph } = await import(
     pathToFileURL(resolve(ROOT, 'packages/core/src/entities/index.ts')).href
   );
-  const { fetchSourceChunks } = await import(
+  const { fetchSourceChunks, listIndexedSources } = await import(
     pathToFileURL(resolve(ROOT, 'packages/core/src/knowledge/index.ts')).href
   );
   const { prisma } = await import(pathToFileURL(resolve(ROOT, 'packages/db/src/index.ts')).href);
@@ -128,7 +130,7 @@ async function main() {
     .slice(0, limit);
 
   console.log(
-    `tenant=${tenant.slug} docs=${documents.length} profile=${profile}${categories ? ` categories=${categories.join(',')}` : ''} tier=${tier} batch=${batchSize} maxBatches=${maxBatches}`,
+    `tenant=${tenant.slug} docs=${documents.length} profile=${profile}${categories ? ` categories=${categories.join(',')}` : ''} tier=${tier} batch=${batchSize} maxBatches=${maxBatches} concurrency=${concurrency}`,
   );
 
   let totalEntities = 0;
@@ -136,14 +138,24 @@ async function main() {
   let tokensIn = 0;
   let tokensOut = 0;
 
+  // The stored sourceId is only valid for chunks written by the synchronous
+  // ingest. After a Content Understanding indexer run the index keys chunks by
+  // a blob-derived id instead, and the Document row has no way to know it — so
+  // resolve through the manifest id, which is the blob filename either way.
+  const sourceIdByManifestId = await withRetry('index source map', () =>
+    listIndexedSources(indexName(), tenant.id, WORKSPACE_PARTITION),
+  );
+
   for (const doc of documents) {
-    const meta = doc.metadata as { sourceId?: string; year?: number };
-    if (!meta.sourceId) {
-      console.log(`  ! ${doc.title} — no sourceId in metadata, skipping`);
+    const meta = doc.metadata as { sourceId?: string; manifestId?: string; year?: number };
+    const sourceId =
+      (meta.manifestId ? sourceIdByManifestId.get(meta.manifestId) : undefined) ?? meta.sourceId;
+    if (!sourceId) {
+      console.log(`  ! ${doc.title} — not present in the index, skipping`);
       continue;
     }
     const chunks = (
-      await fetchSourceChunks(indexName(), tenant.id, WORKSPACE_PARTITION, meta.sourceId)
+      await fetchSourceChunks(indexName(), tenant.id, WORKSPACE_PARTITION, sourceId)
     ).filter((c: { content: string }) => c.content.trim().length >= MIN_CHUNK_CHARS);
 
     const batches: Array<Array<{ chunkIx: number; text: string }>> = [];
@@ -163,35 +175,51 @@ async function main() {
     let docEntities = 0;
     let docRels = 0;
 
-    for (const batch of batches) {
-      try {
-        const extraction = await extractGraphFromChunks({
-          docTitle: doc.title,
-          category: doc.category ?? 'general',
-          year: meta.year ?? new Date().getFullYear(),
-          chunks: batch,
-          model: tier,
-          profile,
-        });
-        tokensIn += extraction.usage.inputTokens;
-        tokensOut += extraction.usage.outputTokens;
-        const persisted = await withRetry('persist', () =>
-          persistGraph({
-            db: prisma,
-            tenantId: tenant.id,
-            documentId: doc.id,
-            entities: extraction.entities,
-            relationships: extraction.relationships,
-            chunkIxs: batch.map((c) => c.chunkIx),
-          }),
-        );
-        docEntities += persisted.entitiesUpserted;
-        docRels += persisted.relationshipsUpserted;
-      } catch (err) {
-        // One bad batch must not sink the document.
-        console.log(
-          `\n    batch failed: ${err instanceof Error ? err.message.slice(0, 120) : err}`,
-        );
+    // Extraction is a latency-bound model call, so run a window of them at
+    // once; persistence stays strictly sequential because two batches touching
+    // the same entity would race on the upsert. At ~5k tokens per call this
+    // window sits well inside the deployment's TPM quota.
+    for (let w = 0; w < batches.length; w += concurrency) {
+      const window = batches.slice(w, w + concurrency);
+      const extractions = await Promise.all(
+        window.map((batch) =>
+          extractGraphFromChunks({
+            docTitle: doc.title,
+            category: doc.category ?? 'general',
+            year: meta.year ?? new Date().getFullYear(),
+            chunks: batch,
+            model: tier,
+            profile,
+          }).then(
+            (ok) => ({ ok, batch, err: null as unknown }),
+            (err: unknown) => ({ ok: null, batch, err }),
+          ),
+        ),
+      );
+
+      for (const { ok: extraction, batch, err: extractErr } of extractions) {
+        try {
+          if (!extraction) throw extractErr;
+          tokensIn += extraction.usage.inputTokens;
+          tokensOut += extraction.usage.outputTokens;
+          const persisted = await withRetry('persist', () =>
+            persistGraph({
+              db: prisma,
+              tenantId: tenant.id,
+              documentId: doc.id,
+              entities: extraction.entities,
+              relationships: extraction.relationships,
+              chunkIxs: batch.map((c) => c.chunkIx),
+            }),
+          );
+          docEntities += persisted.entitiesUpserted;
+          docRels += persisted.relationshipsUpserted;
+        } catch (err) {
+          // One bad batch must not sink the document.
+          console.log(
+            `\n    batch failed: ${err instanceof Error ? err.message.slice(0, 120) : err}`,
+          );
+        }
       }
     }
     totalEntities += docEntities;

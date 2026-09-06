@@ -28,6 +28,7 @@ export {
   deleteSession,
   ensureKnowledgeIndex,
   fetchSourceChunks,
+  listIndexedSources,
   listSessionSources,
   purgeExpired,
   searchKnowledge,

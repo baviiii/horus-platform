@@ -294,6 +294,52 @@ export async function fetchSourceChunks(
   return chunks;
 }
 
+/**
+ * Distinct sources present in a session's partition, keyed by manifest id.
+ *
+ * Source identity is not portable between the two ingest paths. The
+ * synchronous ingest mints a `randomUUID()` per run and records it on the
+ * Prisma `Document` row; the Content Understanding indexer derives `sourceId`
+ * from the blob path instead (base64 of the storage URL) and has no way to
+ * know what Postgres called the same document. Anything that starts from a
+ * `Document` row and wants its chunks — `build-graph.ts` above all — therefore
+ * cannot rely on the stored id after an indexer run.
+ *
+ * The join is the blob filename, which `upload-corpus.ts` writes as
+ * `<manifestId>.pdf`. Title looks like the obvious key and is not: blob
+ * metadata is ASCII-only over HTTP headers, so a title carrying an em dash
+ * arrives in the index with the character silently dropped and never matches
+ * the Postgres row.
+ */
+export async function listIndexedSources(
+  indexName: string,
+  tenantId: string,
+  sessionId: string,
+): Promise<Map<string, string>> {
+  const byManifestId = new Map<string, string>();
+  for (let skip = 0; ; skip += 1000) {
+    const results = await client(indexName).search('*', {
+      filter: scopeFilter(tenantId, sessionId),
+      top: 1000,
+      skip,
+      select: ['sourceId', 'sourceUrl'],
+    });
+    let got = 0;
+    for await (const result of results.results) {
+      const doc = result.document as { sourceId?: string; sourceUrl?: string };
+      got++;
+      if (!doc.sourceId || !doc.sourceUrl) continue;
+      const file = decodeURIComponent(doc.sourceUrl.split('/').pop() ?? '');
+      const manifestId = file.replace(/\.[^.]+$/, '');
+      if (manifestId && !byManifestId.has(manifestId)) {
+        byManifestId.set(manifestId, doc.sourceId);
+      }
+    }
+    if (got < 1000) break;
+  }
+  return byManifestId;
+}
+
 /** Count chunks currently indexed for a session (quota enforcement). */
 export async function countSessionChunks(
   indexName: string,
