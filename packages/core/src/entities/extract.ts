@@ -58,6 +58,9 @@ Extraction rules:
 1. Extract only what the text states. Never infer entities or edges from world knowledge.
 2. Prefer specific over generic: "Department for Education" (organization), "Fee-Free TAFE" (program), "defence shipbuilding" (sector), "software engineer" (occupation).
 3. Funding: when a dollar amount is attached to a program/measure, put the amount on the FUNDING or PROGRAM entity as attributes { "amount_aud": <number>, "period": "<e.g. 2026-27>" } and add a "funds" edge from the funding organization to the target.
+3a. TABLES: chunks may contain HTML tables. A budget row carries one figure PER YEAR COLUMN — read the header row to decide which year a figure belongs to, and take the column you can actually justify. Never guess a period from column position alone: if the header does not tell you the year, give the amount with no "period" rather than an invented one.
+3b. Figures in these documents are frequently in thousands ($000) — check the table's unit heading and convert to whole dollars for "amount_aud". Digits separated by spaces are one number: "4 769" is 4769, not two values.
+3c. A row's meaning depends on the section heading above it ("Cash inflows" vs "Cash outflows"). Money received and money paid are opposite directions — set the "funds" edge accordingly, and if the section is not visible in the chunk, omit the edge rather than assuming a direction.
 4. Canonical names: singular, title case for proper nouns, no trailing punctuation, expand obvious acronyms into aliases (e.g. name "Department of State Development", aliases ["DSD"]).
 5. Every relationship's "from" and "to" MUST exactly match the "name" of an entity you list in the same response.
 6. Every relationship carries a short verbatim "evidence" quote from the text.
@@ -152,6 +155,67 @@ export interface ExtractChunkBatchParams {
   profile?: ExtractionProfile;
 }
 
+/**
+ * Australian financial year, or a plain/spanning year: 2026-27, 2026-2027,
+ * 2026, or "2025-26 to 2029-30". Anything else is not a period we recognise.
+ */
+const PERIOD_RE =
+  /^(?:\d{4}-\d{2}|\d{4}-\d{4}|\d{4})(?:\s*(?:to|–|—|-)\s*(?:\d{4}-\d{2}|\d{4}-\d{4}|\d{4}))?$/;
+
+/**
+ * An order of magnitude above any real line item — the whole Commonwealth
+ * budget is ~$0.7tn. A value past this is arithmetic on corrupted text, not
+ * money.
+ */
+const MAX_PLAUSIBLE_AUD = 1e12;
+
+/**
+ * Money guard.
+ *
+ * `amount_aud` is the most load-bearing thing the extractor produces and the
+ * easiest to corrupt. A budget row offers four figures (one per year column),
+ * and page furniture can weld itself onto the last one — the raw text really
+ * did contain `1 9552025-26`, which is a page footer glued to a value. A
+ * number derived from that looks every bit as authoritative as a correct one,
+ * and the evidence quote backing it is genuinely verbatim, so nothing
+ * downstream can tell them apart.
+ *
+ * So: implausible magnitudes lose the amount, and unparseable periods lose the
+ * period rather than mislabelling the year. A period is NOT required — plenty
+ * of legitimate figures are stated in prose without one ("$2.4 billion for the
+ * Sovereign Steel Package"), and demanding one would discard good data to
+ * chase bad. The entity and its edges always survive; only the suspect
+ * attribute is dropped.
+ */
+export function sanitizeAttributes(
+  attrs: ExtractedEntity['attributes'],
+): ExtractedEntity['attributes'] {
+  if (!attrs) return attrs;
+  const out = { ...attrs };
+
+  if ('period' in out) {
+    const period = typeof out.period === 'string' ? out.period.trim() : '';
+    if (!PERIOD_RE.test(period)) delete out.period;
+    else out.period = period;
+  }
+
+  if ('amount_aud' in out) {
+    const raw = out.amount_aud;
+    const n =
+      typeof raw === 'number'
+        ? raw
+        : Number(
+            String(raw)
+              .replace(/[\s,$]/g, '')
+              .replace(/[^\d.]/g, ''),
+          );
+    if (!Number.isFinite(n) || n <= 0 || n >= MAX_PLAUSIBLE_AUD) delete out.amount_aud;
+    else out.amount_aud = n;
+  }
+
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 export async function extractGraphFromChunks(
   params: ExtractChunkBatchParams,
 ): Promise<GraphExtraction> {
@@ -192,7 +256,11 @@ export async function extractGraphFromChunks(
   for (const candidate of raw.entities ?? []) {
     const parsed = ExtractedEntitySchema.safeParse(candidate);
     if (parsed.success) {
-      entities.push({ ...parsed.data, name: canonicalName(parsed.data.name, parsed.data.type) });
+      entities.push({
+        ...parsed.data,
+        name: canonicalName(parsed.data.name, parsed.data.type),
+        attributes: sanitizeAttributes(parsed.data.attributes),
+      });
     }
   }
 
