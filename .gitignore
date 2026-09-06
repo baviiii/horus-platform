@@ -63,3 +63,8 @@ crash.*.log
 
 .vercel
 .env*
+
+# Generated graph extraction artefacts (large, regenerable)
+graph-extract.json
+graph-extract.json.tmp
+graph-load.sql
