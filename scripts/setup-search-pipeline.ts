@@ -152,26 +152,18 @@ function index() {
     ],
     vectorSearch: {
       algorithms: [{ name: 'hnsw-default', kind: 'hnsw' }],
-      profiles: [
-        {
-          name: 'vector-profile',
-          algorithm: 'hnsw-default',
-          // Lets the index embed query text itself at search time.
-          vectorizer: 'openai-vectorizer',
-        },
-      ],
-      vectorizers: [
-        {
-          name: 'openai-vectorizer',
-          kind: 'azureOpenAI',
-          azureOpenAIParameters: {
-            resourceUri: required('AZURE_AU_OPENAI_ENDPOINT'),
-            deploymentId: required('AZURE_AU_EMBEDDING_DEPLOYMENT'),
-            modelName: 'text-embedding-3-large',
-            ...(EMBEDDING_DIMENSIONS !== 3072 && { dimensions: EMBEDDING_DIMENSIONS }),
-          },
-        },
-      ],
+      // No index-side vectorizer. Integrated vectorization would let the index
+      // embed raw query text itself, but on this API version the vectorizer
+      // config cannot carry `dimensions` — neither `azureOpenAIParameters`
+      // (legacy type, property absent) nor `parameters` (not a recognised
+      // property) accepts it. It would therefore emit 3072-dim query vectors
+      // against a 1024-dim field and fail every search.
+      //
+      // Nothing needs it: `searchKnowledge` embeds queries client-side through
+      // `embedQuery`, which honours EMBEDDING_DIMENSIONS and so matches the
+      // field exactly. Revisit only if raw-text search against the index is
+      // ever wanted, and then only at 3072 dims.
+      profiles: [{ name: 'vector-profile', algorithm: 'hnsw-default' }],
     },
   };
 }
