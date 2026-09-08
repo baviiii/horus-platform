@@ -6,3 +6,7 @@ apps/web/.next
 **/.terraform
 **/node_modules
 *.zip
+
+# Generated graph artefacts — regenerable, not part of the app
+graph-extract.json
+graph-load.sql
