@@ -15,5 +15,5 @@ export {
   type GraphExtraction,
 } from './extract.js';
 
-export { isEdgeTypeValid } from './extract.js';
+export { isEdgeTypeValid, sanitizeAttributes } from './extract.js';
 export { persistGraph, type PersistParams, type PersistResult } from './persist.js';

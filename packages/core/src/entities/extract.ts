@@ -156,11 +156,20 @@ export interface ExtractChunkBatchParams {
 }
 
 /**
- * Australian financial year, or a plain/spanning year: 2026-27, 2026-2027,
- * 2026, or "2025-26 to 2029-30". Anything else is not a period we recognise.
+ * `period` is deliberately NOT validated.
+ *
+ * Two attempts at a rule were both wrong, each proved by a dry run over the
+ * live graph. Requiring a financial-year shape rejected "4 years from 2026-27",
+ * "2025-26 onwards" and "2027-28 to beyond 2028-29". Requiring merely a
+ * bounded year then rejected "10 years", "per annum" and "2 calendar years".
+ * Budget papers express timing as prose, and the legitimate forms are open-ended
+ * enough that any pattern I guess deletes real information.
+ *
+ * The asymmetry decides it: a strange period is confusing metadata, whereas a
+ * wrong number is a false financial claim. Magnitude is the check that catches
+ * actual corruption — `1 9552025-26` arrives attached to an absurd amount, and
+ * that is what gets dropped.
  */
-const PERIOD_RE =
-  /^(?:\d{4}-\d{2}|\d{4}-\d{4}|\d{4})(?:\s*(?:to|–|—|-)\s*(?:\d{4}-\d{2}|\d{4}-\d{4}|\d{4}))?$/;
 
 /**
  * An order of magnitude above any real line item — the whole Commonwealth
@@ -193,9 +202,11 @@ export function sanitizeAttributes(
   if (!attrs) return attrs;
   const out = { ...attrs };
 
+  // Period is normalised but never rejected — see the note above PERIOD_RE's
+  // removal. An empty string is the only value worth dropping.
   if ('period' in out) {
     const period = typeof out.period === 'string' ? out.period.trim() : '';
-    if (!PERIOD_RE.test(period)) delete out.period;
+    if (!period) delete out.period;
     else out.period = period;
   }
 
@@ -207,9 +218,14 @@ export function sanitizeAttributes(
         : Number(
             String(raw)
               .replace(/[\s,$]/g, '')
-              .replace(/[^\d.]/g, ''),
+              .replace(/[^\d.-]/g, ''),
           );
-    if (!Number.isFinite(n) || n <= 0 || n >= MAX_PLAUSIBLE_AUD) delete out.amount_aud;
+    // Negatives and zero are kept deliberately. Budget papers are full of both
+    // — savings measures, net operating outflows, nil allocations for a given
+    // year — and an earlier version that rejected them would have deleted real
+    // figures such as the Racing Industry Fund's -$3.7m. Magnitude is the only
+    // reliable corruption signal.
+    if (!Number.isFinite(n) || Math.abs(n) >= MAX_PLAUSIBLE_AUD) delete out.amount_aud;
     else out.amount_aud = n;
   }
 

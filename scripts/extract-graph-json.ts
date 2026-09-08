@@ -81,6 +81,8 @@ interface JsonDocument {
   chunks: number;
   batches: number;
   failedBatches: number;
+  /** Why batches failed, reason -> count. Empty when none did. */
+  failureReasons: Record<string, number>;
   entities: JsonEntity[];
   relationships: JsonRelationship[];
   usage: { inputTokens: number; outputTokens: number };
@@ -220,6 +222,8 @@ async function main() {
     const entities = new Map<string, JsonEntity>();
     const relationships = new Map<string, JsonRelationship>();
     let failedBatches = 0;
+    /** reason -> count, so a run reports what actually went wrong. */
+    const failureReasons = new Map<string, number>();
     let docTokensIn = 0;
     let docTokensOut = 0;
 
@@ -235,15 +239,26 @@ async function main() {
             model: tier,
             profile,
           }).then(
-            (ok: unknown) => ({ ok, batch }),
-            () => ({ ok: null, batch }),
+            (ok: unknown) => ({ ok, batch, err: null as unknown }),
+            (err: unknown) => ({ ok: null, batch, err }),
           ),
         ),
       );
 
-      for (const { ok, batch } of results) {
+      for (const { ok, batch, err } of results) {
         if (!ok) {
           failedBatches++;
+          // Record WHY. Swallowing this is how a 17% failure rate went
+          // unnoticed across a whole run — the count was reported, the cause
+          // was not, and there was nothing to act on afterwards.
+          const message =
+            err instanceof Error
+              ? err.message
+              : typeof err === 'string'
+                ? err
+                : JSON.stringify(err);
+          const reason = (message || 'unknown').slice(0, 160);
+          failureReasons.set(reason, (failureReasons.get(reason) ?? 0) + 1);
           continue;
         }
         const extraction = ok as {
@@ -331,6 +346,7 @@ async function main() {
       chunks: chunks.length,
       batches: batches.length,
       failedBatches,
+      failureReasons: Object.fromEntries(failureReasons),
       entities: [...entities.values()],
       relationships: [...relationships.values()],
       usage: { inputTokens: docTokensIn, outputTokens: docTokensOut },
@@ -344,6 +360,9 @@ async function main() {
     console.log(
       `${entities.size}e/${relationships.size}r in ${((Date.now() - started) / 1000).toFixed(0)}s${failedBatches ? ` (${failedBatches} batches failed)` : ''}`,
     );
+    for (const [reason, n] of [...failureReasons.entries()].sort((a, b) => b[1] - a[1])) {
+      console.log(`      ${n}x ${reason}`);
+    }
   }
 
   const totals = Object.values(out.documents).reduce(
