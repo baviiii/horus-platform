@@ -335,7 +335,70 @@ mode into plain RAG) and `performBasicAnalysis` returns
 `contradictions: [], gaps: [], themes: []`. Removing the Azure Functions
 without building replacements would silently blank those UI surfaces.
 
-## 9. Still open
+## 9. The budget router — in progress
+
+The `budget.*` router behind PolicyVisualizer is written but not yet committed or
+deployed: a pre-publish review found problems in how it labels and ranks figures,
+and those are being fixed first. This section will carry its design record when it
+lands.
+
+## 10. `/api/embed` — similarity ranking for jobs and news (2026-09-27)
+
+CareerCraft ranks the jobs and articles it already fetches by how close each is
+to the user's profile. The edge function (`job-news`, `job-search`) sends the
+profile text plus every item text in one call, gets vectors back, and takes
+the cosine itself. Nothing is stored on either side, so there is nothing to go
+stale when a profile changes and nothing to migrate if the model does.
+
+```
+POST /api/embed                       Horus API key, scope intelligence:infer
+  in:  { input: string[]              1–128 items, each ≤ 8,000 chars, ≤ 200,000 total
+         model?: 'small'              the only model served (text-embedding-3-small)
+         dimensions?: number }        64 … 1536
+                                      inputs × dimensions ≤ 150,000, else 400
+  out: { vectors: number[][]          one per input, in input order
+         count, model, dimensions, tokens }
+```
+
+- **Own deployment, small only.** It runs on a dedicated deployment (350K
+  TPM). `large` is deliberately not offered: the only large deployment is the
+  knowledge index's (50K TPM), and outside traffic on it would throttle
+  Horus's own search for every tenant. If small ever proves too weak, add a
+  dedicated large deployment. Idle deployments cost nothing; Standard bills
+  per token.
+- **Response-size cap.** Vercel refuses responses over 4.5 MB. The route
+  rejects `inputs × dimensions > 150,000` _before_ calling Azure, so an
+  oversized request is never billed. 100 inputs at 512 dimensions is 51,200.
+- **Inputs over 2,000 chars are truncated, not rejected.** That's a job title
+  plus the opening of its description. The rest of a JSearch advert is
+  benefits and boilerplate that multiplies the cost without changing the
+  ranking.
+- **Same key as `/api/infer`.** It reuses `intelligence:infer`, so the key
+  `horusInfer()` already uses works without a re-mint.
+- **Metered.** One `UsageRecord` per call (`EMBEDDINGS`, tokens, `apiKeyId`).
+  A metering failure is logged and does not fail the request.
+- **Fails fast.** 8 s timeout, no retries. On a 429 the OpenAI SDK would
+  otherwise sleep for Azure's Retry-After (up to 59 s) before retrying. The
+  caller falls back to ranking without similarity, so a quick 502 beats a
+  slow success.
+- **Keys of deactivated tenants are refused** (`validateApiKey` filters on
+  `tenant.isActive`), matching what the tRPC resolver already enforced.
+- **Ask for `dimensions: 512`.** One profile plus 50 jobs at native width is
+  ~1.5 MB of JSON on small (3 MB on large); at 512 it is ~470 KB and returns
+  in roughly half the time. Ranking 50 items needs nothing wider.
+- **Vectors from different models are not comparable.** Embed the profile and
+  its items in the same call, which the design already does.
+
+**Ranking check (`scripts/verify-embed.ts --compare`).** Five cases, each
+passing only if every related (and adjacent) item outscores every unrelated
+one: nurse vs nursing jobs, Australian shorthand both ways (AIN/PCA adverts
+against a spelled-out aged-care profile; sparky/FIFO against an electrician),
+health-sector roles adjacent to a nurse, and news headlines. Baseline on
+large, 2026-09-29: **5/5**, with margins of 0.185 / 0.254 / 0.183 / **0.078** /
+0.149. The adjacent-roles case is the tight one and the one to watch on small.
+`--compare` prints both models side by side.
+
+## 11. Still open
 
 1. **Wave 2 — the agentic collapse.** The Horus agent already does multi-step
    tool use server-side (it reformulated "how many workers…" into a

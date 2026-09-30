@@ -145,6 +145,30 @@ resource "azapi_resource" "realtime" {
   depends_on = [azurerm_cognitive_deployment.embedding]
 }
 
+# Separate from `embedding` rather than a replacement: the knowledge index is
+# built from text-embedding-3-large vectors, and vectors from different models
+# are not comparable, so retrieval stays on large. This one serves /api/embed.
+resource "azurerm_cognitive_deployment" "embedding_small" {
+  count = var.deploy_embedding_small ? 1 : 0
+
+  name                 = "text-embedding-3-small"
+  cognitive_account_id = azurerm_cognitive_account.main.id
+
+  model {
+    format  = "OpenAI"
+    name    = "text-embedding-3-small"
+    version = "1"
+  }
+
+  sku {
+    name     = var.embedding_sku_name
+    capacity = var.embedding_small_capacity
+  }
+
+  # Last in the chain: the account rejects concurrent deployment operations.
+  depends_on = [azapi_resource.realtime]
+}
+
 # --- Grounding with Bing Search ---------------------------------------------
 # The Bing resource lives at resource-group scope (location "global"); a
 # project connection carrying its key makes it available as an agent tool.

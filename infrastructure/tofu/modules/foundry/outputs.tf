@@ -49,6 +49,11 @@ output "embedding_deployment_name" {
   value       = azurerm_cognitive_deployment.embedding.name
 }
 
+output "embedding_small_deployment_name" {
+  description = "Small embedding deployment behind /api/embed — AZURE_OPENAI_EMBEDDING_SMALL_MODEL (null when deploy_embedding_small is false)."
+  value       = var.deploy_embedding_small ? azurerm_cognitive_deployment.embedding_small[0].name : null
+}
+
 output "realtime_deployment_name" {
   description = "Realtime voice deployment — AZURE_OPENAI_REALTIME_DEPLOYMENT (null when deploy_realtime is false)."
   value       = var.deploy_realtime ? azapi_resource.realtime[0].name : null

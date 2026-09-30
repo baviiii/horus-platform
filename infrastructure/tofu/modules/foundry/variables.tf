@@ -72,6 +72,18 @@ variable "embedding_capacity" {
   default     = 50
 }
 
+variable "deploy_embedding_small" {
+  description = "Also deploy text-embedding-3-small: the cheap model behind /api/embed, where callers rank results per request and store nothing. Off for accounts that only index documents."
+  type        = bool
+  default     = false
+}
+
+variable "embedding_small_capacity" {
+  description = "text-embedding-3-small capacity in thousands of TPM. Sized for live traffic, not ingestion: one CareerCraft search embeds ~50 strings (~13-25K tokens), so 50K TPM would throttle at 2-4 searches a minute. Standard bills per token, so unused capacity is free."
+  type        = number
+  default     = 350
+}
+
 variable "deploy_realtime" {
   description = "Deploy the realtime speech-to-speech model. Off for regional accounts (e.g. australiaeast) that carry document workloads but not voice — realtime ships to a handful of regions only."
   type        = bool

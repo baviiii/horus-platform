@@ -20,4 +20,10 @@ export function getOpenAIClient(): AzureOpenAI {
 export const MODELS = {
   completion: process.env.AZURE_OPENAI_COMPLETION_MODEL ?? 'gpt-4o-mini',
   embedding: process.env.AZURE_OPENAI_EMBEDDING_MODEL ?? 'text-embedding-3-large',
+  /**
+   * Behind /api/embed only — the knowledge index stays on `embedding`. `||`,
+   * not `??`: print-horus-env.ps1 prints this var empty when the deployment
+   * is off, and an empty deployment name 404s every call.
+   */
+  embeddingSmall: process.env.AZURE_OPENAI_EMBEDDING_SMALL_MODEL || 'text-embedding-3-small',
 } as const;

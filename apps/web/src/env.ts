@@ -17,6 +17,7 @@ const ServerEnvSchema = z.object({
   AZURE_OPENAI_API_VERSION: z.string().optional(),
   AZURE_OPENAI_COMPLETION_MODEL: z.string().optional(),
   AZURE_OPENAI_EMBEDDING_MODEL: z.string().optional(),
+  AZURE_OPENAI_EMBEDDING_SMALL_MODEL: z.string().optional(),
   // Capability tiers for /infer. Both fall back to the completion deployment.
   AZURE_OPENAI_FAST_MODEL: z.string().optional(),
   AZURE_OPENAI_DEEP_MODEL: z.string().optional(),

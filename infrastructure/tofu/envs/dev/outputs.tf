@@ -54,6 +54,11 @@ output "openai_embedding_deployment" {
   value       = module.foundry.embedding_deployment_name
 }
 
+output "openai_embedding_small_deployment" {
+  description = "Small embedding deployment behind /api/embed — AZURE_OPENAI_EMBEDDING_SMALL_MODEL."
+  value       = module.foundry.embedding_small_deployment_name
+}
+
 output "openai_realtime_deployment" {
   description = "Realtime voice deployment name — AZURE_OPENAI_REALTIME_DEPLOYMENT."
   value       = module.foundry.realtime_deployment_name

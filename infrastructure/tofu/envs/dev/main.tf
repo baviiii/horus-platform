@@ -35,6 +35,7 @@ module "foundry" {
   chat_model_version     = var.chat_model_version
   chat_sku_name          = var.chat_sku_name
   embedding_sku_name     = var.embedding_sku_name
+  deploy_embedding_small = true
   realtime_model_name    = var.realtime_model
   realtime_model_version = var.realtime_model_version
   deploy_bing_grounding  = var.deploy_bing_grounding

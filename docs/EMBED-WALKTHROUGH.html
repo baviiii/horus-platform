@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>/api/embed walkthrough</title>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --ink: #1c1b19;
+    --muted: #6b6860;
+    --line: #e3e0d8;
+    --code-bg: #f1efe9;
+    --accent: #2f5d8a;
+    --accent-soft: #e6eef6;
+    --warn: #8a5a14;
+    --warn-soft: #fbf1df;
+    --ok: #2e6b3f;
+    --ok-soft: #e5f2e8;
+    --cc: #6a3f8a;
+    --cc-soft: #f1e9f7;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614;
+      --surface: #1f1e1b;
+      --ink: #e9e6df;
+      --muted: #9d998f;
+      --line: #34322d;
+      --code-bg: #2a2925;
+      --accent: #8db6de;
+      --accent-soft: #22303d;
+      --warn: #e2b36b;
+      --warn-soft: #33291a;
+      --ok: #8fcb9d;
+      --ok-soft: #1e2d22;
+      --cc: #c9a3e6;
+      --cc-soft: #2c2233;
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.6 var(--sans); }
+  .wrap { max-width: 900px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  header h1 { font-size: 1.9rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.9rem; margin-bottom: 28px; }
+  nav a { color: var(--accent); text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+
+  h2 { font-size: 1.3rem; margin: 48px 0 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+  h3 { font-size: 1.05rem; margin: 30px 0 8px; }
+  h3 .path { font: 600 0.85rem var(--mono); color: var(--muted); display: block; margin-top: 2px; }
+  p { margin: 0 0 10px; }
+  ul, ol { margin: 0 0 12px; padding-left: 1.3em; }
+  li { margin: 4px 0; }
+
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre {
+    font-family: var(--mono); font-size: 0.82rem; line-height: 1.55;
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; margin: 0 0 12px; overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .ln { color: var(--muted); user-select: none; }
+  .c { color: var(--muted); }
+
+  .scroll { overflow-x: auto; margin: 0 0 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; background: var(--surface); }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border: 1px solid var(--line); }
+  th { font-weight: 600; background: var(--code-bg); }
+
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 14px; }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout.ok { border-color: var(--ok); background: var(--ok-soft); }
+
+  .status { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 8px; }
+  .status > div { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+  .status h4 { margin: 0 0 6px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .status ul { margin: 0; padding-left: 1.1em; font-size: 0.9rem; }
+  .s-done h4 { color: var(--ok); }
+  .s-you h4 { color: var(--warn); }
+  .s-not h4 { color: var(--muted); }
+  @media (max-width: 760px) { .status { grid-template-columns: 1fr; } }
+
+  /* request journey */
+  .flow { display: grid; gap: 0; margin: 8px 0 16px; }
+  .step {
+    display: grid; grid-template-columns: 34px 1fr; gap: 12px; align-items: start;
+    background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px;
+  }
+  .step .n {
+    width: 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    font: 700 0.8rem var(--sans); background: var(--accent-soft); color: var(--accent);
+  }
+  .step.cc { border-color: var(--cc); border-style: dashed; }
+  .step.cc .n { background: var(--cc-soft); color: var(--cc); }
+  .step b { display: block; }
+  .step .where { font: 0.8rem var(--mono); color: var(--muted); }
+  .arrow { text-align: center; color: var(--muted); line-height: 1; padding: 3px 0; font-size: 0.9rem; }
+  .legend { font-size: 0.85rem; color: var(--muted); margin-bottom: 6px; }
+  .legend span { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin: 0 4px 0 10px; }
+  .legend .h { background: var(--accent-soft); border: 1px solid var(--accent); }
+  .legend .k { border: 1px dashed var(--cc); background: var(--cc-soft); }
+
+  dl.gloss { display: grid; grid-template-columns: max-content 1fr; gap: 8px 16px; margin: 0 0 12px; }
+  dl.gloss dt { font-weight: 600; }
+  dl.gloss dd { margin: 0; }
+  @media (max-width: 640px) { dl.gloss { grid-template-columns: 1fr; } dl.gloss dd { margin-bottom: 8px; } }
+
+  details { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 12px; margin: 0 0 8px; }
+  details summary { cursor: pointer; font-weight: 600; }
+  details[open] summary { margin-bottom: 6px; }
+
+  ol.timeline { list-style: none; padding: 0; border-left: 2px solid var(--line); margin-left: 6px; }
+  ol.timeline li { position: relative; padding: 0 0 12px 18px; margin: 0; }
+  ol.timeline li::before {
+    content: ""; position: absolute; left: -7px; top: 7px; width: 12px; height: 12px;
+    border-radius: 50%; background: var(--bg); border: 2px solid var(--accent);
+  }
+  ol.timeline li.bump::before { border-color: var(--warn); }
+
+  footer { margin-top: 48px; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1>/api/embed: a guided read-through</h1>
+  <p class="sub">
+    How profile-based ranking for CareerCraft was built on the Horus side, laid out in reading order.
+    Allow about 40 minutes with the code open beside this page.
+  </p>
+  <nav>
+    <a href="#status">Where it stands</a>
+    <a href="#idea">The idea</a>
+    <a href="#journey">One search, end to end</a>
+    <a href="#read">Reading order</a>
+    <a href="#decisions">Decisions &amp; why</a>
+    <a href="#story">How we got here</a>
+    <a href="#try">Try it yourself</a>
+    <a href="#commit">What got committed</a>
+  </nav>
+</header>
+
+<h2 id="status">Where it stands (29 Sep)</h2>
+<div class="status">
+  <div class="s-done">
+    <h4>Done</h4>
+    <ul>
+      <li>Tofu for the small-model deployment</li>
+      <li>Core helper <code>embed()</code></li>
+      <li><code>POST /api/embed</code> route</li>
+      <li>Verify script, 5 ranking cases</li>
+      <li>Contract in <code>CAREERCRAFT-INTEGRATION.md</code> §10</li>
+      <li>Typechecks clean. Live on large: all checks pass, ranking 5/5.</li>
+    </ul>
+  </div>
+  <div class="s-you">
+    <h4>Waiting on you</h4>
+    <ul>
+      <li><code>tofu apply</code> to create the small deployment (it doesn't exist yet)</li>
+      <li><code>verify-embed.ts --compare</code> to test small against large</li>
+      <li>Deploy Horus to Vercel</li>
+      <li>Rotate the AU OpenAI key</li>
+    </ul>
+  </div>
+  <div class="s-not">
+    <h4>Not done / not here</h4>
+    <ul>
+      <li>No live HTTP call yet. That needs the deploy and a real key.</li>
+      <li>The CareerCraft side (<code>horusEmbed()</code>, the edge functions, scoring) lives in the other repo and belongs to the other session</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="idea">The idea, in one paragraph</h2>
+<p>
+  CareerCraft already fetches about 50 jobs or articles per search. To rank them by how well they fit <em>this</em>
+  user, it sends the user's profile text and every item's text to Horus in one request. Horus turns each text into a
+  list of numbers (an <strong>embedding</strong>). CareerCraft measures how close each item's numbers are to the
+  profile's (<strong>cosine similarity</strong>) and adds that to the match score it already shows. Nothing is stored
+  anywhere. Every search computes everything fresh, so there's nothing to go stale and nothing to clean up.
+</p>
+
+<h3>Words you'll meet in the code</h3>
+<dl class="gloss">
+  <dt>Embedding / vector</dt>
+  <dd>A list of numbers (1,536 of them for the small model) that represents what a text <em>means</em>. Texts with
+    similar meaning get similar lists, even with no words in common. That's why "AIN" can land near
+    "Assistant in Nursing".</dd>
+  <dt>Cosine similarity</dt>
+  <dd>A single number that says how closely two vectors point the same way. 1 means identical meaning. In our tests,
+    related jobs scored 0.45–0.75 and unrelated jobs 0.20–0.31. What matters is the ranking, not the raw value.</dd>
+  <dt>Dimensions</dt>
+  <dd>How many numbers are in each vector. The text-embedding-3 models are trained so that the first N numbers carry
+    most of the meaning ("Matryoshka"). Asking for <code>dimensions: 512</code> gives shorter vectors that rank almost
+    as well, which means a much smaller response.</dd>
+  <dt>Token</dt>
+  <dd>The unit Azure bills by. Roughly 4 characters of English. Embeddings are charged per input token only.</dd>
+  <dt>Deployment</dt>
+  <dd>A named instance of a model inside an Azure AI account (for example, <code>text-embedding-3-small</code>). Your
+    code calls the deployment by its name.</dd>
+  <dt>TPM / capacity</dt>
+  <dd>Tokens per minute: a speed limit on a deployment. Go over it and Azure returns 429 "too many requests".</dd>
+  <dt>Standard vs Provisioned</dt>
+  <dd>Standard bills only per token used, so an idle deployment costs $0 whatever its capacity. Provisioned (PTU)
+    bills hourly whether used or not. Everything here is Standard.</dd>
+</dl>
+
+<h2 id="journey">One search, end to end</h2>
+<div class="legend">
+  <span class="h"></span>Horus: built, in this repo
+  <span class="k"></span>CareerCraft: planned, in the other repo
+</div>
+<div class="flow">
+  <div class="step cc"><div class="n">1</div><div>
+    <b>The user searches on /au-jobs</b>
+    The page already has their profile loaded (<code>usePersonalization</code>). It builds one short string, e.g.
+    <em>"Registered Nurse. Currently Enrolled Nurse. Healthcare. Skills: wound care, …"</em>, and sends it with the search.
+    If the user hasn't personalised yet, it sends nothing and steps 3–6 are skipped, so they cost nothing.
+    <div class="where">CareerCraft · AustralianJobs.tsx</div>
+  </div></div>
+  <div class="arrow">↓</div>
+  <div class="step cc"><div class="n">2</div><div>
+    <b>The edge function fetches jobs, then calls Horus once</b>
+    It gets jobs from Adzuna and JSearch as it does today, then calls
+    <code>horusEmbed([profileText, ...jobs.map(title + description)], dimensions: 512)</code>.
+    <div class="where">CareerCraft · supabase/functions/job-news · _shared/ai/horus.ts</div>
+  </div></div>
+  <div class="arrow">↓ HTTPS, Bearer Horus API key</div>
+  <div class="step"><div class="n">3</div><div>
+    <b>The route checks who's asking and what they sent</b>
+    It checks the key is valid and carries the <code>intelligence:infer</code> scope. It validates the body shape and
+    rejects oversized batches.
+    <div class="where">apps/web/src/app/api/embed/route.ts : 70–120</div>
+  </div></div>
+  <div class="arrow">↓</div>
+  <div class="step"><div class="n">4</div><div>
+    <b>The core helper makes one Azure call</b>
+    It picks the deployment (small by default), cuts every text to 2,000 characters, sends them all in one request
+    with an 8-second timeout, and puts the answers back in input order.
+    <div class="where">packages/core/src/inference/embed.ts : 42–73</div>
+  </div></div>
+  <div class="arrow">↓</div>
+  <div class="step"><div class="n">5</div><div>
+    <b>Azure runs text-embedding-3-small</b>
+    It runs on its own deployment (350K TPM), separate from the large one Horus's knowledge search uses.
+    <div class="where">infrastructure/tofu/modules/foundry/main.tf : 151</div>
+  </div></div>
+  <div class="arrow">↓</div>
+  <div class="step"><div class="n">6</div><div>
+    <b>The route records usage and responds</b>
+    It writes one <code>UsageRecord</code> (meter <code>EMBEDDINGS</code>, token count) against the key's tenant, then
+    returns <code>{ vectors, count, model, dimensions, tokens }</code>.
+    <div class="where">apps/web/src/app/api/embed/route.ts : 134–164</div>
+  </div></div>
+  <div class="arrow">↓</div>
+  <div class="step cc"><div class="n">7</div><div>
+    <b>CareerCraft scores and renders</b>
+    For each job it computes <code>cosine(vectors[0], vectors[i])</code>, which is plain maths and free.
+    <code>isJobRecommended</code> turns that into up to ~25 match points, and <code>MatchMeter</code> draws the ring
+    as it already does. <strong>If Horus fails at any step, the page still loads</strong>, ranked on the other
+    signals only.
+    <div class="where">CareerCraft · job-news · isJobRecommended · MatchMeter</div>
+  </div></div>
+</div>
+
+<h2 id="read">Reading order</h2>
+<p>This follows the order things depend on each other: infrastructure, then config, then logic, then the HTTP edge,
+  then the proof. Line numbers are as of 29 Sep.</p>
+
+<h3>Stop 1: the model deployment
+  <span class="path">infrastructure/tofu/modules/foundry/main.tf : 148–170</span></h3>
+<pre><code><span class="ln">151</span> resource "azurerm_cognitive_deployment" "embedding_small" {
+<span class="ln">152</span>   count = var.deploy_embedding_small ? 1 : 0
+<span class="ln">   </span>   name  = "text-embedding-3-small"
+<span class="ln">   </span>   ...
+<span class="ln">   </span>   sku {
+<span class="ln">   </span>     name     = var.embedding_sku_name        <span class="c"># "Standard": billed per token</span>
+<span class="ln">   </span>     capacity = var.embedding_small_capacity  <span class="c"># 350 = 350K tokens/minute</span>
+<span class="ln">   </span>   }
+<span class="ln">   </span>   depends_on = [azapi_resource.realtime]
+<span class="ln">   </span> }</code></pre>
+<ul>
+  <li><strong><code>count = … ? 1 : 0</code></strong> is Tofu's on/off switch. The foundry module is used twice, for the
+    US account and the AU account, and only the US one sets <code>deploy_embedding_small = true</code>
+    (<code>envs/dev/main.tf:38</code>).</li>
+  <li><strong>Capacity 350.</strong> One search is about 13–25K tokens, so the large deployment's 50K would start
+    refusing calls at 2–4 searches a minute. 350K was the full quota available (checked with
+    <code>az cognitiveservices usage list -l eastus2</code>), and on Standard, unused capacity costs nothing.</li>
+  <li><strong><code>depends_on</code></strong> makes Tofu create deployments one at a time. Azure rejects two
+    deployment changes on the same account at once.</li>
+  <li><strong>Why a second deployment instead of switching the existing one:</strong> the knowledge search index was
+    built from <em>large</em> vectors. Vectors from different models can't be compared, so the index has to stay on
+    large.</li>
+</ul>
+<p>Also look at <code>modules/foundry/variables.tf:75–85</code> (the two new variables, with their reasoning in the
+  descriptions) and <code>outputs.tf</code> / <code>print-horus-env.ps1</code> (they surface the deployment name like
+  every other one).</p>
+
+<h3>Stop 2: the model name in config
+  <span class="path">packages/core/src/clients/openai.ts : 24</span></h3>
+<pre><code><span class="ln">24</span>   embeddingSmall: process.env.AZURE_OPENAI_EMBEDDING_SMALL_MODEL ?? 'text-embedding-3-small',</code></pre>
+<p>The default matches the deployment name from Stop 1, so Vercel needs <strong>no new environment variable</strong>.
+  The env var exists only as an override. The client itself (<code>getOpenAIClient</code>, line 5) is shared: the
+  same endpoint and key as everything else on the US account.</p>
+
+<h3>Stop 3: the core helper, which is where the real work happens
+  <span class="path">packages/core/src/inference/embed.ts</span></h3>
+<pre><code><span class="ln">17</span> export const EMBED_MAX_INPUTS = 128;
+<span class="ln">25</span> export const EMBED_MAX_CHARS = 2000;
+   ...
+<span class="ln">48</span>   const deployment = options.model === 'large' ? MODELS.embedding : MODELS.embeddingSmall;
+   ...
+<span class="ln">52</span>   const res = await getOpenAIClient().embeddings.create(
+       {
+         model: deployment,
+         input: input.map((text) =&gt; text.slice(0, EMBED_MAX_CHARS)),
+         ...(options.dimensions ? { dimensions: options.dimensions } : {}),
+       },
+<span class="ln">63</span>     { timeout: 8_000, maxRetries: 0 },
+     );
+   ...
+<span class="ln">67</span>   for (const item of res.data) vectors[item.index] = item.embedding;</code></pre>
+<p>Four details are worth understanding here. Each one is a deliberate difference from the older helper in
+  <code>packages/core/src/knowledge/embeddings.ts</code>, so open that file too:</p>
+<ol>
+  <li><strong>One request, not batches.</strong> The older <code>embedTexts</code> sends groups of 16 one after
+    another (<code>BATCH_SIZE = 16</code>, line 9). For 51 texts that's 4 round trips added together, which is fine
+    for background indexing but slow inside a user's search.</li>
+  <li><strong>Truncate to 2,000 characters.</strong> That's about 500 tokens: a job title plus the start of its
+    description. JSearch returns full adverts, and the tail is benefits and boilerplate. Without the cap, cost goes up
+    5–10× and the ranking doesn't change.</li>
+  <li><strong>8-second timeout, no retries.</strong> The OpenAI SDK's default is a 10-minute timeout with 2 retries.
+    Worse, on a 429 it sleeps for Azure's Retry-After (up to 59 s) before retrying. CareerCraft has a fallback, so
+    failing fast is better: the user sees results either way.</li>
+  <li><strong><code>vectors[item.index]</code></strong> places each answer by the index Azure reports instead of
+    trusting arrival order. The verify script tests exactly this: the same text at positions 0 and 2 has to come back
+    identical.</li>
+</ol>
+
+<h3>Stop 4: the HTTP route
+  <span class="path">apps/web/src/app/api/embed/route.ts</span></h3>
+<p>Open <code>apps/web/src/app/api/infer/route.ts</code> side by side. The skeleton is deliberately the same
+  (read key, validate key, check scope, parse body), so anyone who knows one route knows the other. The differences
+  are the interesting part:</p>
+<div class="scroll">
+<table>
+  <tr><th>Lines</th><th>What</th><th>Why</th></tr>
+  <tr><td>63–68</td><td><code>readKey</code>: <code>Authorization: Bearer</code> or <code>x-functions-key</code></td><td>Copied from <code>/api/infer</code> so CareerCraft's existing helper works unchanged</td></tr>
+  <tr><td>76, 82</td><td><code>validateApiKey</code> + <code>intelligence:infer</code> scope</td><td>Reuses the inference scope, so the key <code>horusInfer()</code> already uses is enough. A new scope would mean re-minting keys for no security gain.</td></tr>
+  <tr><td>50–60</td><td>zod schema: 1–128 inputs, each ≤ 8,000 chars; <code>model</code> may only be <code>'small'</code>; <code>dimensions</code> 64–1536</td><td>Bad input gets a clear 400 here instead of a confusing error from Azure</td></tr>
+  <tr><td>103–108</td><td>Total-size guard (≤ 200,000 chars)</td><td>Came from the other session's version. Each input can be legal while the whole batch is absurd.</td></tr>
+  <tr><td>110–120</td><td>Response-size guard: <code>inputs × dimensions ≤ 150,000</code></td><td>Vercel refuses responses over 4.5 MB. Checking before Azure is called means an oversized request is never billed.</td></tr>
+  <tr><td>125</td><td><code>embed(...)</code>, with any failure → 502</td><td>A 502 tells CareerCraft to fall back</td></tr>
+  <tr><td>134–153</td><td><code>usageRecord.create</code> in a try/catch that only logs</td><td>Usage gets attributed per tenant and per key. If the ledger write fails, the caller still gets vectors that Azure has already billed for.</td></tr>
+  <tr><td>155–164</td><td>Response <code>{ vectors, count, model, dimensions, tokens }</code></td><td><code>count</code> is kept from the other session's version so its code still works. <code>model</code> lets a caller refuse to mix vectors from different models.</td></tr>
+</table>
+</div>
+<div class="callout">
+  <strong>Where's the tenant isolation?</strong> There's no data to isolate, because nothing is stored or read. The
+  tenant comes from the API key, never from the request body, and it's only used to attribute usage. That's the
+  multi-tenancy rule applied to a stateless endpoint.
+</div>
+
+<h3>Stop 5: the proof
+  <span class="path">scripts/verify-embed.ts</span></h3>
+<ul>
+  <li><strong>Line 45, <code>cosine</code>:</strong> the same maths CareerCraft will do. It's worth reading once to
+    see it's just multiply-and-add.</li>
+  <li><strong>Line 75, <code>CASES</code>:</strong> five scenarios. Each item is tagged <em>related</em>,
+    <em>adjacent</em> or <em>unrelated</em>. The Australian-shorthand cases are there because they're where a smaller
+    model is most likely to stumble.</li>
+  <li><strong>Line 263, the pass rule:</strong> the lowest related or adjacent score must beat the highest unrelated
+    score. That's a strict rule on purpose, because it's the property the match score depends on.</li>
+  <li><strong>Line 278, response size:</strong> this is where the "always ask for 512 dimensions" advice comes from.
+    On large, 3 MB at full width versus 469 KB at 512.</li>
+</ul>
+<p>It calls the core helper directly, not the HTTP route, so it needs no API key. The route only adds auth,
+  validation and metering on top.</p>
+
+<h3>Stop 6: the contract
+  <span class="path">docs/CAREERCRAFT-INTEGRATION.md §10</span></h3>
+<p>This is what CareerCraft codes against: the request and response shape, the limits, "ask for 512", and the
+  large-model baseline. If you change the route, change this too.</p>
+
+<h2 id="decisions">Decisions &amp; why</h2>
+<div class="scroll">
+<table>
+  <tr><th>Decision</th><th>Why</th><th>Revisit if…</th></tr>
+  <tr><td>Small model only</td><td>Short English text, coarse fit; 6.5× cheaper per token. <code>large</code> isn't served because the only large deployment is the knowledge index's.</td><td><code>--compare</code> shows small failing a case large passes. Then add a <em>dedicated</em> large deployment.</td></tr>
+  <tr><td>Its own deployment</td><td>The index must stay on large; CareerCraft traffic can't throttle Horus's own search</td><td>Never, really. It costs nothing idle.</td></tr>
+  <tr><td>Store nothing</td><td>No stale vectors after profile edits, no backfill, no migration if the model changes</td><td>Volume grows enough that re-embedding popular jobs costs real money. Then cache job vectors.</td></tr>
+  <tr><td>Embed the profile, not the search query</td><td>Adzuna already filtered by the query, so every result would score about the same against it</td><td>Career changers complain their searches get pushed down</td></tr>
+  <tr><td>Truncate at 2,000, reject at 8,000</td><td>Truncating bounds cost without failing a whole search over one long advert. Rejecting catches garbage input.</td><td>Ranking misses matches that live deep in descriptions</td></tr>
+  <tr><td>Metering fails open</td><td>Azure has already billed; failing the request would waste that and break the search</td><td>You bill tenants for embeddings and need an exact ledger</td></tr>
+  <tr><td>8 s timeout, no retries</td><td>The caller has a fallback, so speed beats persistence</td><td>Timeouts show up in the logs under normal load</td></tr>
+</table>
+</div>
+
+<h2 id="story">How we got here</h2>
+<ol class="timeline">
+  <li><strong>The plan came from the CareerCraft session.</strong> It designed the flow (profile → embed → cosine →
+    MatchMeter) and asked two questions: small or large, and who writes the Horus side.</li>
+  <li class="bump"><strong>Its assumptions were checked against this repo, and three were wrong:</strong> the env var
+    name, the claim that <code>/api/infer</code> is metered (it isn't), and the small model being deployed (only large
+    was).</li>
+  <li><strong>Small vs large:</strong> benchmarks show a small gap for this kind of task, the choice can be reversed
+    per request, and small costs 1/6.5 as much per token.</li>
+  <li><strong>Cost check:</strong> idle Standard deployments cost $0. Your own bill proves it: 5 deployments, and the
+    model charges only appear on days with actual use.</li>
+  <li class="bump"><strong>A quota check changed the design:</strong> sharing the large deployment's 50K TPM would
+    throttle at 2–4 searches a minute, so the small model got its own deployment with 350K.</li>
+  <li><strong>Tofu written.</strong> The plan showed exactly <em>1 to add</em>. The apply was blocked by a permission
+    check (correctly, since it changes live infrastructure), so it's yours to run.</li>
+  <li><strong>Core helper and route written,</strong> both typecheck, and they were verified live against large,
+    because small doesn't exist yet.</li>
+  <li class="bump"><strong>The route was rewritten underneath us</strong> by the other session. Its version didn't
+    compile (<code>embedTexts</code> takes one argument), silently ignored <code>dimensions</code>, shared the large
+    deployment, and had no timeout or metering. It was merged back, keeping its size guard, comments and
+    <code>count</code>.</li>
+  <li><strong>The ranking cases were extended</strong> with Australian shorthand, adjacent roles and news. Large
+    passes 5/5. The adjacent-roles margin is the tightest at 0.078, so that's the one to watch on small.</li>
+  <li class="bump"><strong>A code review before publishing found six problems on the embed side, all now fixed:</strong>
+    responses could exceed Vercel's 4.5 MB limit; <code>model: 'large'</code> let outside traffic onto the knowledge
+    index's deployment; a single retry could sleep 59 s; deactivated tenants' keys still worked; an empty env var
+    broke the model name; and the new env var wasn't declared.</li>
+</ol>
+
+<h2 id="try">Try it yourself</h2>
+<p>These make the code stick faster than reading alone:</p>
+<ol>
+  <li>Run <code>pnpm exec tsx scripts/verify-embed.ts --model large</code> and match each printed section to the code
+    that produced it.</li>
+  <li>In section 4 of the script, change <code>512</code> to <code>256</code> and watch the size and time change.</li>
+  <li>Add a case to <code>CASES</code> using a profile you know well, such as your own. Does the ranking match your
+    gut?</li>
+  <li>Run <code>tofu -chdir=infrastructure/tofu/envs/dev plan</code> and find the new deployment in the output.</li>
+  <li>After the apply, run with <code>--compare</code> and read the two columns side by side.</li>
+</ol>
+
+<details>
+  <summary>Check yourself: why can't Horus's knowledge search just switch to small as well?</summary>
+  Its index holds vectors made by large. A small-model query vector can't be compared with them, because they
+  describe meaning on different "maps". Switching would mean re-embedding the entire corpus. The embed endpoint
+  avoids this problem by storing nothing.
+</details>
+<details>
+  <summary>Check yourself: what happens to a user's search if Azure is down?</summary>
+  <code>embed()</code> fails within about 8 s, and the route returns 502. CareerCraft's
+  <code>horusEmbed</code> sees the failure, skips similarity, and ranks on the other signals. The page loads, and no
+  error is shown.
+</details>
+<details>
+  <summary>Check yourself: why does the 350K capacity cost nothing?</summary>
+  It's a Standard deployment, which bills per token processed. Capacity is only a ceiling on throughput, not
+  something reserved and paid for. (Provisioned deployments are different, and none are used here.)
+</details>
+<details>
+  <summary>Check yourself: which tenant gets billed, and where does that come from?</summary>
+  The tenant that owns the API key. It comes from <code>validateApiKey</code> (<code>auth.tenantId</code>), never
+  from the request body, so a caller can't bill someone else.
+</details>
+
+<h2 id="commit">What got committed</h2>
+<p>On 30 Sep the embed work went in as two commits: the deactivated-tenant fix in <code>validateApiKey</code>, then
+  the endpoint itself. The budget router was left <strong>uncommitted on purpose</strong>. The pre-publish review
+  found problems in how it labels and ranks figures, and it isn't live in production, so nothing depends on it yet.</p>
+
+<footer>Written 29 Sep 2026. Line numbers match the code as of that date; if a file has changed since, search for the
+  quoted line instead.</footer>
+
+</div>
+</body>
+</html>
