@@ -51,13 +51,19 @@ export async function validateApiKey(plaintext: string): Promise<ApiKeyContext |
   // Lookup candidates by stable hash to avoid bcrypt-comparing every key in the DB.
   // We keep a sha256 in keyHash *prefix* convention is not used here — we instead
   // use the public prefix as the lookup key (12+6 chars is plenty unique).
-  const prefix = plaintext.slice(0, plaintext.indexOf('_', 9) + 1) + plaintext.slice(plaintext.indexOf('_', 9) + 1, plaintext.indexOf('_', 9) + 7);
+  const prefix =
+    plaintext.slice(0, plaintext.indexOf('_', 9) + 1) +
+    plaintext.slice(plaintext.indexOf('_', 9) + 1, plaintext.indexOf('_', 9) + 7);
 
   const candidates = await prisma.apiKey.findMany({
     where: {
       keyPrefix: prefix,
       revokedAt: null,
       OR: [{ expiresAt: null }, { expiresAt: { gt: new Date() } }],
+      // A deactivated tenant's unrevoked keys must stop working everywhere.
+      // The tRPC resolver checks this itself; the REST routes (/api/infer,
+      // /api/embed, /api/sdk/chat) call this directly and relied on it.
+      tenant: { isActive: true },
     },
     take: 5,
   });
