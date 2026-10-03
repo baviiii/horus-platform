@@ -257,6 +257,9 @@ model DocumentEntity {
 
   @@unique([documentId, entityId])
   @@index([tenantId])
+  // Entity → its documents: budget.allocations labels every candidate's
+  // jurisdiction this way, and the (documentId, entityId) key can't serve it.
+  @@index([entityId])
   @@map("document_entities")
 }
 

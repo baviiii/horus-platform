@@ -335,12 +335,159 @@ mode into plain RAG) and `performBasicAnalysis` returns
 `contradictions: [], gaps: [], themes: []`. Removing the Azure Functions
 without building replacements would silently blank those UI surfaces.
 
-## 9. The budget router — in progress
+## 9. The budget router — wiring PolicyVisualizer (2026-09-16)
 
-The `budget.*` router behind PolicyVisualizer is written but not yet committed or
-deployed: a pre-publish review found problems in how it labels and ranks figures,
-and those are being fixed first. This section will carry its design record when it
-lands.
+`PolicyVisualizer.tsx` was the last page in CareerCraft with no backend at all.
+Its charts read four module-level arrays typed into the file: an invented
+budget split, an invented $450M "SA Workforce Strategy 2024" allocation, an
+invented 12,500 jobs, hardcoded training providers on every card, and a
+"Last updated: December 2024" line under it. It rendered as though it were
+reporting on the corpus. It was not connected to anything.
+
+The corpus, meanwhile, already held the material: 19 `budget` documents and 3
+`budget-federal`, both SA budget years plus the Commonwealth papers, and a
+graph carrying **2,666 entities with `amount_aud`** and **3,455 `funds` edges**
+with verbatim evidence. The gap was again "connect two finished halves".
+
+### 9.1 The decision that shaped the whole design: no sums
+
+The obvious endpoint is "total budget per year", and it cannot be built
+honestly from this data. `amount_aud` is not a homogeneous series — the same
+column holds:
+
+| What                | Example                                | Magnitude |
+| ------------------- | -------------------------------------- | --------- |
+| discrete measure    | Fee-Free TAFE                          | millions  |
+| portfolio roll-up   | Total Consolidated Account payments    | $27.3bn   |
+| balance-sheet stock | General Government Sector Total Assets | $127bn    |
+
+…across two budget years and two jurisdictions, with the same measure often
+extracted more than once (commonly as both a `program` and a `funding` entity
+with identical amounts). Summing those yields a large, confident number that
+corresponds to nothing in any document — and, crucially, **nothing downstream
+could flag it**, exactly like the hardcoded arrays it would be replacing.
+
+So `budget.*` exposes no totals and offers no endpoint that would produce one.
+Every figure returned is one extracted value with its document and its quote.
+Aggregation is limited to **counting** — "this funder appears on 115 measures"
+is checkable against the graph; "this funder spent $X" is not. `metric`
+entities are excluded from allocation reads: net worth is a stock, and ranking
+it beside programme spending invites the comparison that isn't valid.
+
+### 9.2 `evidenceStatesAmount` — the bug this surfaced
+
+The evidence quote hangs off the `funds` **edge**. It proves "X funds Y" — not
+necessarily the amount, which the extractor may have read from a table cell
+elsewhere in the chunk. Live example:
+
+```
+AUKUS   amount_aud = 30,000,000,000   period 2026-27
+quote:  "The 2026-27 Budget reflects that funding is already supporting large
+         scale economic recovery and growth projects across regional areas,
+         including … Northern Water, and AUKUS"
+```
+
+The quote states no figure at all. Rendering the amount beside it implies a
+corroboration that does not exist — a subtler version of the original sin.
+
+So the router computes whether the quote actually contains the amount and ships
+the flag; the UI labels the two cases differently ("Source sentence — states
+this figure" vs "Relationship evidence — does not state the figure"). Matching
+accepts ×1000 and ×1e6 scaling because budget tables are denominated in $000
+and $m while the extractor normalises to whole dollars — "15 400 000" in a
+table backs an amount of 15.4bn. On the current graph (after the §9.6 fixes),
+of 60 allocations for 2026-27, 51 carry a quote and **42 of those state the
+figure itself**.
+
+### 9.3 Tenancy note
+
+`budget.*` uses raw SQL for the JSONB numeric sorting Prisma cannot express in
+`orderBy`. Raw SQL does **not** pass through `createTenantScopedClient` — that
+extension only rewrites `where` on model operations — so every query filters
+`"tenantId"` explicitly and parameterised, on **every** table, including those
+reached through a join (`document_entities`, `documents`, the funder and
+measure entities): the schema's single-column foreign keys do not stop a join
+row pointing across tenants. Verified: the other two tenants read zero rows.
+
+### 9.4 Shape
+
+| Procedure            | Returns                                                     | Powers               |
+| -------------------- | ----------------------------------------------------------- | -------------------- |
+| `budget.periods`     | periods with measure counts, best-covered year first        | the period selector  |
+| `budget.allocations` | ranked measures + evidence + funders + source documents     | the ranked bar chart |
+| `budget.funders`     | funders by distinct measure count, plus one largest measure | the funders panel    |
+
+`BudgetAllocation.aliases` (added 2026-10-02) lists the other names a merged
+measure was extracted under. Optional for the client — render it as "also
+called …" if useful; ignoring it loses nothing.
+
+Edge function ops `budget-periods` / `budget-allocations` / `budget-funders`
+pass straight through — unlike the retrieval ops there is no legacy shape to
+adapt to, and reshaping could only drop provenance. Frontend:
+`useBudgetIntelligence` → `lib/horusKnowledge.ts`.
+
+**The existing CareerCraft keys already carry `graph:read`** — checked against
+the database, no re-mint needed.
+
+Verification: `pnpm exec tsx scripts/verify-budget-router.ts` — exercises the
+real router through the real caller against live data (periods, ranking,
+de-duplication, citation coverage, jurisdiction labelling, funders, tenant
+isolation, empty-period handling) plus the corroboration cases above.
+
+### 9.5 What was deleted
+
+`budgetData`, `investmentTimeline`, `policyConnections`, `careerPathways`, the
+hardcoded TAFE SA / UniSA / Adelaide Uni provider badges, the hardcoded
+"2024-2028 (4 year program)" timeline, the non-functional "View Policy
+Document" / "AI Summary" / "View all sources" buttons, and the false "Last
+updated: December 2024" attribution. The Sankey-style `careerPathways` flow has
+no grounded equivalent and was removed rather than re-sourced.
+
+### 9.6 Fixes after the pre-publish review (2026-10-02)
+
+A review, checked against the live top 25 for 2026-27, found the chart's
+visible problems were not the ones it ranked first:
+
+- **One measure, three bars.** The $5.9bn medicines measure appeared as "PBS
+  Medicines Program", "Life-Saving Medicines Cost Reduction" and "…Program"; the
+  $2.9bn fuel-excise package likewise. Exact-name de-duplication could not see
+  it. Now merged when amount, period and a source document match **and** there
+  is positive evidence of sameness: an identical quote, one name's distinctive
+  words contained in the other's, or a figure-stating quote naming the other.
+  Word overlap alone was tried and rejected — it merged two different $500m SA
+  funds, Apartment Fast-Track and Housing Fast-Track. Merging keeps evidence,
+  funders and documents from every row; the old rule dropped the funding row's
+  quote when keeping the program row's label.
+- **Totals and revenue in a spending chart.** "Total Consolidated Account
+  payments" ($27.3bn — essentially the whole SA budget) ranked #3; "Total Sales
+  of Goods and Services Revenue" #16. A name rule now excludes totals, revenue,
+  receipts, appropriations, financing and short accounting-statement lines
+  (calibrated on the 183 candidates among 2,084 figures).
+- **"States this figure" was wrong ~1–2 times per 100**, from number fragments
+  ("2026-27" read as $27m, "$8,670,233,000" as $670m) and loose tolerance. The
+  parser now strips dates and financial years, reads grouped numbers whole,
+  reads space-grouped table rows as runs of columns, and scales only
+  table-cell-shaped numbers. It also catches "$1.2bn" stored as $1.2m. Evidence
+  is now chosen from every quote on every funds edge, deterministically.
+- Smaller: periods count distinct measures and open on the best-covered single
+  year; funders join by entity id; an index on `document_entities("entityId")`
+  (~20% faster allocations).
+
+**Still open**, and why:
+
+- The totals rule is a name rule. It misses portfolio lines without "Total" in
+  the name ("Health Services", $5.6bn) and bundles ("Strengthening Australia's
+  Fuel Resilience Package", $14.8bn, whose components are also listed); "package"
+  is deliberately not in the rule because most packages are real initiatives.
+  Fix: the extractor tags each figure as measure / total / revenue / balance.
+- A figure the extractor attached to a site rather than its fund can show twice
+  ("Warradale Barracks Housing Development" carries the Housing Fast-Track
+  Fund's $500m). The merge leaves it separate rather than risk hiding a measure.
+- The flag checks digits, not units: an unconverted $000 cell still "matches".
+- One entity per (type, name) with attributes merged key-by-key means amount,
+  period and source can come from different extractions — e.g. AUKUS at $30bn
+  labelled "state". Fix: store each extraction's amount + period + document as
+  one record.
 
 ## 10. `/api/embed` — similarity ranking for jobs and news (2026-09-27)
 

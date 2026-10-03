@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>budget.* quick ref</title>
+<style>
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --ink: #1c1b19;
+    --muted: #6b6860;
+    --line: #e3e0d8;
+    --code-bg: #f1efe9;
+    --accent: #2f5d8a;
+    --accent-soft: #e6eef6;
+    --warn: #8a5a14;
+    --warn-soft: #fbf1df;
+    --ok: #2e6b3f;
+    --ok-soft: #e5f2e8;
+    --mono: ui-monospace, "Cascadia Code", "SF Mono", Consolas, monospace;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color-scheme: light;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614;
+      --surface: #1f1e1b;
+      --ink: #e9e6df;
+      --muted: #9d998f;
+      --line: #34322d;
+      --code-bg: #2a2925;
+      --accent: #8db6de;
+      --accent-soft: #22303d;
+      --warn: #e2b36b;
+      --warn-soft: #33291a;
+      --ok: #8fcb9d;
+      --ok-soft: #1e2d22;
+      color-scheme: dark;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.55 var(--sans); }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 40px 20px 80px; }
+
+  header h1 { font-size: 1.9rem; margin: 0 0 4px; letter-spacing: -0.01em; }
+  header h1 code { font-size: inherit; background: none; padding: 0; }
+  .sub { color: var(--muted); margin: 0 0 18px; }
+  nav { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 0.9rem; margin-bottom: 28px; }
+  nav a { color: var(--accent); text-decoration: none; }
+  nav a:hover { text-decoration: underline; }
+
+  h2 { font-size: 1.25rem; margin: 44px 0 12px; padding-top: 14px; border-top: 1px solid var(--line); }
+  h2 code { font-size: 1.1rem; }
+  h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 22px 0 8px; }
+  p { margin: 0 0 10px; }
+  ul, ol { margin: 0 0 10px; padding-left: 1.3em; }
+  li { margin: 3px 0; }
+
+  code { font-family: var(--mono); font-size: 0.86em; background: var(--code-bg); padding: 1px 5px; border-radius: 4px; }
+  pre {
+    font-family: var(--mono); font-size: 0.82rem; line-height: 1.5;
+    background: var(--code-bg); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; margin: 0 0 12px; overflow-x: auto;
+  }
+  pre code { background: none; padding: 0; font-size: inherit; }
+  .c { color: var(--muted); }
+
+  .scroll { overflow-x: auto; margin: 0 0 12px; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.9rem; background: var(--surface); }
+  th, td { text-align: left; vertical-align: top; padding: 7px 10px; border: 1px solid var(--line); }
+  th { font-weight: 600; background: var(--code-bg); white-space: nowrap; }
+  td code { white-space: nowrap; }
+
+  .callout { border-left: 3px solid var(--accent); background: var(--accent-soft); padding: 12px 16px; border-radius: 0 8px 8px 0; margin: 0 0 14px; }
+  .callout.warn { border-color: var(--warn); background: var(--warn-soft); }
+  .callout strong:first-child { display: block; margin-bottom: 2px; }
+
+  .badges { display: inline-flex; gap: 6px; vertical-align: middle; margin-left: 8px; }
+  .badge {
+    font: 600 0.7rem/1 var(--sans); text-transform: uppercase; letter-spacing: 0.05em;
+    padding: 4px 7px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); background: var(--surface);
+  }
+  .badge.scope { color: var(--ok); background: var(--ok-soft); border-color: transparent; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+  .grid > div { min-width: 0; }
+  @media (max-width: 760px) { .grid { grid-template-columns: 1fr; } }
+
+  .yes { color: var(--ok); font-weight: 600; }
+  footer { margin-top: 48px; color: var(--muted); font-size: 0.85rem; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <h1><code>budget.*</code> quick ref</h1>
+  <p class="sub">
+    <code>packages/api/src/routers/budget.ts</code> · mounted as <code>appRouter.budget</code> ·
+    3 read-only queries over the knowledge graph, all gated on <code>graph:read</code>
+  </p>
+  <nav>
+    <a href="#glance">At a glance</a>
+    <a href="#access">Access &amp; errors</a>
+    <a href="#measures">What counts as a measure</a>
+    <a href="#tenancy">Tenant scoping</a>
+    <a href="#periods">periods</a>
+    <a href="#allocations">allocations</a>
+    <a href="#funders">funders</a>
+    <a href="#types">Types</a>
+    <a href="#evidence">evidenceStatesAmount</a>
+    <a href="#limits">Known limits</a>
+    <a href="#consumers">Consumers &amp; verify</a>
+  </nav>
+</header>
+
+<div class="callout">
+  <strong>The one rule: it never sums.</strong>
+  Every amount returned is one extracted value, with its source document and quote attached. No endpoint totals
+  <code>amount_aud</code>, because that column mixes discrete measures, portfolio roll-ups ($27.3bn) and
+  balance-sheet stocks ($127bn), across two budget years and two jurisdictions, with duplicates. Adding them up gives
+  a number that appears in no document. The only aggregation is <em>counting</em>. Don't add a totals endpoint.
+</div>
+
+<h2 id="glance">At a glance</h2>
+<div class="scroll">
+<table>
+  <tr><th>Procedure</th><th>Answers</th><th>Input</th><th>Returns</th><th>Powers (CareerCraft)</th></tr>
+  <tr>
+    <td><code>budget.periods</code></td>
+    <td>Which periods have enough figures to show? Best-covered year first.</td>
+    <td><code>{ minMeasures? }</code><br>optional, <code>periods()</code> works</td>
+    <td><code>{ periods }</code></td>
+    <td>Period selector</td>
+  </tr>
+  <tr>
+    <td><code>budget.allocations</code></td>
+    <td>Largest measures for a period, each with its evidence. Duplicates are merged.</td>
+    <td><code>{ period?, source?, types?, limit? }</code><br><strong>object required</strong>, pass <code>{}</code></td>
+    <td><code>{ allocations, period, basis }</code></td>
+    <td>Ranked bar chart</td>
+  </tr>
+  <tr>
+    <td><code>budget.funders</code></td>
+    <td>Which bodies fund the most measures?</td>
+    <td><code>{ period?, limit? }</code><br><strong>object required</strong>, pass <code>{}</code></td>
+    <td><code>{ funders, basis }</code></td>
+    <td>Funders panel</td>
+  </tr>
+</table>
+</div>
+
+<pre><code>const { periods }     = await caller.budget.periods({});
+const { allocations } = await caller.budget.allocations({ period: '2026-27', source: 'state', types: ['program'], limit: 10 });
+const { funders }     = await caller.budget.funders({ period: '2026-27' });</code></pre>
+
+<h2 id="access">Access &amp; errors</h2>
+<p>
+  Every procedure is <code>scopedProcedure('graph:read')</code>, which runs <code>requireTenant</code> and then the
+  scope check. No user is required, so API-key callers work. The existing CareerCraft keys already carry
+  <code>graph:read</code>.
+</p>
+<div class="scroll">
+<table>
+  <tr><th>Condition</th><th>tRPC code</th><th>Message</th></tr>
+  <tr><td>No <code>ctx.tenant</code> or <code>ctx.db</code></td><td><code>UNAUTHORIZED</code></td><td>Tenant context required</td></tr>
+  <tr><td>Scopes lack <code>graph:read</code></td><td><code>FORBIDDEN</code></td><td>Missing required scopes: graph:read</td></tr>
+  <tr><td>Input fails zod (including a missing input object on <code>allocations</code> / <code>funders</code>)</td><td><code>BAD_REQUEST</code></td><td>zod issues</td></tr>
+  <tr><td>Unknown period, or tenant has no budget data</td><td>none</td><td>Empty array. This is not an error.</td></tr>
+</table>
+</div>
+
+<h2 id="measures">What counts as a measure</h2>
+<p>Ranking only means something among like things. All three procedures apply the same filter:</p>
+<ul>
+  <li><strong>Types:</strong> <code>program</code>, <code>funding</code> and <code>policy</code> only. <code>metric</code>,
+    where balance-sheet stocks live, is never selectable.</li>
+  <li><strong>The amount must be a JSON number.</strong> A malformed row is skipped instead of failing the query.</li>
+  <li><strong>The name must not mark a total</strong> (<code>measureNameFilter</code>). It excludes:
+    <ul>
+      <li>names starting with <em>Total</em></li>
+      <li>names containing the whole words <em>revenue(s), receipts, appropriation(s), borrowing(s), liability/ies,
+        assets</em></li>
+      <li><em>investing / capital program, expenditure, investment</em></li>
+      <li><em>operating balance, net worth, net debt, net lending, cash surplus/deficit</em></li>
+      <li>short names (≤ 6 words) ending in <em>expenses, payments, expenditure</em></li>
+    </ul>
+  </li>
+</ul>
+<p>The rule was calibrated against the live graph: 183 candidates among 2,084 figures. Matching is on whole words, so
+  "RevenueSA Information Online system" stays in. It's still a name rule, so it's approximate; see
+  <a href="#limits">Known limits</a>.</p>
+
+<h2 id="tenancy">Tenant scoping</h2>
+<div class="callout warn">
+  <strong>Raw SQL bypasses the tenant extension.</strong>
+  All three procedures use <code>ctx.db.$queryRaw</code>, and <code>createTenantScopedClient</code> only rewrites
+  <code>where</code> on model operations. Scoping comes entirely from the <code>"tenantId"</code> predicates in the
+  SQL. <strong>Removing one leaks data across tenants.</strong>
+</div>
+<div class="scroll">
+<table>
+  <tr><th>Procedure</th><th>Tables, each filtered on its own <code>"tenantId"</code></th></tr>
+  <tr><td><code>periods</code></td><td><code>entities</code> <span class="yes">direct</span></td></tr>
+  <tr><td><code>allocations</code></td><td><code>entities</code>, <code>relationships</code>, <code>document_entities</code>, <code>documents</code>, and the funder <code>entities</code> <span class="yes">all direct</span></td></tr>
+  <tr><td><code>funders</code></td><td><code>relationships</code> and both joined <code>entities</code> (funder and measure) <span class="yes">all direct</span></td></tr>
+</table>
+</div>
+<p>Joined tables are filtered too, not just reached through a filtered row. The schema's foreign keys are
+  single-column, so nothing stops a join row from pointing at another tenant's row. The verify script confirms the
+  other tenants read zero rows.</p>
+
+<h2 id="periods"><code>budget.periods</code>
+  <span class="badges"><span class="badge">query</span><span class="badge scope">graph:read</span></span></h2>
+<div class="grid">
+  <div>
+    <h3>Input · optional</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>Field</th><th>Type</th><th>Default</th></tr>
+      <tr><td><code>minMeasures</code></td><td>int 1–100</td><td><code>5</code></td></tr>
+    </table>
+    </div>
+    <h3>What it does</h3>
+    <p>For each period, it counts distinct <em>name + amount</em> pairs among measures that have a period, and drops
+      periods below <code>minMeasures</code>.</p>
+    <h3>Order</h3>
+    <ol>
+      <li>Single financial years (<code>2026-27</code>, consecutive years, not ranges like <code>2026-30</code>),
+        best-covered first</li>
+      <li>Then ranges and prose periods, also best-covered first</li>
+    </ol>
+    <p>So a client that defaults to the first entry lands on the main budget year.</p>
+  </div>
+  <div>
+    <h3>Returns</h3>
+<pre><code>{
+  periods: Array&lt;{
+    period: string;    <span class="c">// as written: "2026-27", "2026-27 to 2029-30"</span>
+    measures: number;  <span class="c">// distinct name + amount pairs</span>
+  }&gt;
+}</code></pre>
+    <h3>Gotchas</h3>
+    <ul>
+      <li><code>measures</code> is an <strong>upper bound</strong> on the bars <code>allocations</code> will show. A
+        measure extracted under two different names counts twice here, while <code>allocations</code> merges it.</li>
+      <li>A missing year means it has fewer than <code>minMeasures</code> figures. It doesn't mean the year has no
+        data.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="allocations"><code>budget.allocations</code>
+  <span class="badges"><span class="badge">query</span><span class="badge scope">graph:read</span></span></h2>
+<p>This is the only procedure that returns amounts, and it returns them one measure at a time.</p>
+<h3>Input · object required</h3>
+<div class="scroll">
+<table>
+  <tr><th>Field</th><th>Type</th><th>Default</th><th>Behaviour</th></tr>
+  <tr><td><code>period</code></td><td>string ≤ 40</td><td>all periods</td><td>Exact match on <code>attributes.period</code></td></tr>
+  <tr><td><code>source</code></td><td><code>'federal' | 'state' | 'other'</code></td><td>all</td><td>Filtered in SQL <em>before</em> LIMIT</td></tr>
+  <tr><td><code>types</code></td><td><code>('program' | 'funding' | 'policy')[]</code>, 1–3</td><td>all three</td><td><code>metric</code> can't be selected</td></tr>
+  <tr><td><code>limit</code></td><td>int 1–100</td><td><code>25</code></td><td>Applied after merging</td></tr>
+</table>
+</div>
+
+<div class="grid">
+  <div>
+    <h3>Pipeline</h3>
+    <ol>
+      <li><strong>Select</strong> the tenant's <a href="#measures">measures</a> of <code>types</code>, matching
+        <code>period</code> if one is given.</li>
+      <li><strong>Label the source</strong> from linked documents: <code>budget-federal</code> → federal, otherwise
+        <code>budget</code> → state, otherwise other. Federal wins when both apply.</li>
+      <li><strong>Filter</strong> by <code>source</code>, sort by amount DESC then id (a stable tie-break), and fetch
+        <code>min(limit × 4, 400)</code> rows.</li>
+      <li><strong>Gather</strong> for each row: every quote on every incoming <code>funds</code> edge (strongest
+        first), the funders, and the documents.</li>
+      <li><strong>Merge</strong> rows with the same amount and period that are the same measure. Either the names
+        match, or they share a document <em>and</em> there's evidence they're one measure:
+        <ul>
+          <li>an identical quote</li>
+          <li>one name's distinctive words contained in the other's</li>
+          <li>a quote that states the figure and names the other row</li>
+        </ul>
+        The label comes from the best row (program over policy over funding, then the row with evidence). The other
+        names become <code>aliases</code>. Evidence, funders and documents come from <em>every</em> row.</li>
+      <li><strong>Choose the evidence</strong>: the first quote that states the amount, otherwise the strongest
+        edge's first quote. Then compute the flag and slice to <code>limit</code>.</li>
+    </ol>
+  </div>
+  <div>
+    <h3>Returns</h3>
+<pre><code>{
+  allocations: <a href="#types">BudgetAllocation</a>[];
+  period: string | null;   <span class="c">// echoes the input</span>
+  basis: 'Individual figures extracted from source
+          documents. Not summed. Totals, revenue and
+          accounting lines are excluded.';
+}</code></pre>
+    <h3>Gotchas</h3>
+    <ul>
+      <li>Negative amounts (savings) are kept and sort last.</li>
+      <li>Merging can return fewer rows than <code>limit</code>.</li>
+      <li>Show <code>basis</code> in the UI, so the list isn't read as a complete or additive account of the
+        budget.</li>
+      <li>Merging is deliberately conservative. When it's unsure, it leaves two bars rather than hiding a measure
+        inside another. A regression check keeps the two different $500m Fast-Track funds apart.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="funders"><code>budget.funders</code>
+  <span class="badges"><span class="badge">query</span><span class="badge scope">graph:read</span></span></h2>
+<div class="grid">
+  <div>
+    <h3>Input · object required</h3>
+    <div class="scroll">
+    <table>
+      <tr><th>Field</th><th>Type</th><th>Default</th></tr>
+      <tr><td><code>period</code></td><td>string ≤ 40</td><td>all periods</td></tr>
+      <tr><td><code>limit</code></td><td>int 1–50</td><td><code>12</code></td></tr>
+    </table>
+    </div>
+    <h3>What it does</h3>
+    <ul>
+      <li>Walks <code>funds</code> edges into <a href="#measures">measures</a>.</li>
+      <li>Groups by funder <strong>entity</strong> and counts distinct measure names.</li>
+      <li>Keeps the top <code>limit</code> funders, each with the single largest measure it funds. Ties sort by
+        name.</li>
+    </ul>
+    <p>It reports counts, not totals: a count can be checked against the graph, whereas a sum would double-count
+      roll-ups and re-extractions.</p>
+  </div>
+  <div>
+    <h3>Returns</h3>
+<pre><code>{
+  funders: Array&lt;{
+    name: string;
+    type: string;          <span class="c">// funder's entity type</span>
+    measureCount: number;  <span class="c">// distinct measure names</span>
+    largestMeasure: { name: string; amountAud: number } | null;
+  }&gt;;
+  basis: 'Measure counts from `funds` edges.
+          Amounts are single figures, never totals.';
+}</code></pre>
+    <h3>Gotchas</h3>
+    <ul>
+      <li>A measure extracted under two names counts twice here. Counting doesn't merge the way
+        <code>allocations</code> does.</li>
+      <li>Funder names are as extracted, so an occasional artefact appears, such as "SA State Budget 2026-27" typed as
+        an event.</li>
+    </ul>
+  </div>
+</div>
+
+<h2 id="types">Types</h2>
+<p>These are re-exported from the <code>@horus/api</code> package root. The root export is required: without it,
+  <code>apps/web</code>'s <code>getServerCaller</code> fails with TS2742. CareerCraft mirrors these types by hand, so
+  treat a change to them as a breaking change.</p>
+<div class="scroll">
+<table>
+  <tr><th>Field</th><th>Type</th><th>Meaning</th></tr>
+  <tr><td colspan="3"><strong><code>BudgetAllocation</code></strong></td></tr>
+  <tr><td><code>id</code></td><td><code>string</code></td><td>Entity id of the label row</td></tr>
+  <tr><td><code>name</code></td><td><code>string</code></td><td>Measure name as extracted</td></tr>
+  <tr><td><code>aliases</code></td><td><code>string[]</code></td><td>Other names the same measure was extracted under. Empty for most rows. Added 2026-10-02 and safe to ignore.</td></tr>
+  <tr><td><code>type</code></td><td><code>string</code></td><td><code>program</code> | <code>funding</code> | <code>policy</code></td></tr>
+  <tr><td><code>amountAud</code></td><td><code>number</code></td><td>One extracted figure, in whole dollars</td></tr>
+  <tr><td><code>period</code></td><td><code>string | null</code></td><td>As stated in the document</td></tr>
+  <tr><td><code>source</code></td><td><code>BudgetSource</code></td><td>Computed in SQL, so the label and the filter always match</td></tr>
+  <tr><td><code>evidence</code></td><td><code>string | null</code></td><td>The first figure-stating quote across all <code>funds</code> edges, otherwise the strongest edge's first quote</td></tr>
+  <tr><td><code>evidenceStatesAmount</code></td><td><code>boolean</code></td><td>True only if that sentence itself states <code>amountAud</code></td></tr>
+  <tr><td><code>funders</code></td><td><code>string[]</code></td><td>Union across merged rows, sorted</td></tr>
+  <tr><td><code>documents</code></td><td><code>BudgetDocumentRef[]</code></td><td>Union across merged rows</td></tr>
+  <tr><td colspan="3"><strong><code>BudgetDocumentRef</code></strong>: <code>{ id: string; title: string; category: string | null }</code></td></tr>
+  <tr><td colspan="3"><strong><code>BudgetSource</code></strong>: <code>'federal' | 'state' | 'other'</code></td></tr>
+</table>
+</div>
+
+<h2 id="evidence"><code>evidenceStatesAmount(evidence, amount)</code></h2>
+<p><code>(evidence: string | null, amount: number) =&gt; boolean</code>. It's exported from
+  <code>routers/budget.ts</code>, not the package root.</p>
+<div class="grid">
+  <div>
+    <h3>Why it exists</h3>
+    <p>The quote is attached to the <code>funds</code> <em>edge</em>. It proves "X funds Y", but the amount may have
+      been read from somewhere else in the chunk. For example, AUKUS carries $30bn, and its quote contains no
+      figure.</p>
+    <h3>UI contract</h3>
+    <ul>
+      <li><code>true</code> → "Source sentence: states this figure"</li>
+      <li><code>false</code> → "Relationship evidence: does not state the figure"</li>
+    </ul>
+  </div>
+  <div>
+    <h3>How it matches</h3>
+    <ol>
+      <li><strong>Strip dates and financial years first</strong> ("Dec 2031", "2026-27", bare years). They're never
+        amounts, and in tables they weld onto the figure that follows them.</li>
+      <li><strong>Words with a magnitude</strong> ("$8.6 billion", "$53m") are already scaled and are compared
+        as-is.</li>
+      <li><strong>Comma-grouped numbers are read whole</strong>, never as their fragments, and tried at ×1, ×1,000
+        and ×1,000,000. Tables are in $000 or $m, and Commonwealth tables put <code>$</code> on cells too.</li>
+      <li><strong>Space-grouped table rows</strong> are read as runs of 2–4 adjacent column groups, so "Dec 2027 365
+        361 164 400" yields 365,361 ($000).</li>
+      <li><strong>Remaining bare whole numbers of 100 or more</strong> are scaled. Smaller numbers and decimals are
+        counts or programme numbers and are compared as-is.</li>
+      <li><strong>Any candidate within 1% of <code>|amount|</code></strong> counts as a match.</li>
+    </ol>
+    <p>It checks digits, not units. An unconverted $000 cell still matches; see below.</p>
+  </div>
+</div>
+
+<h2 id="limits">Known limits</h2>
+<div class="callout warn">
+  <strong>What the router can't fix on its own.</strong> Each of these needs a change in extraction or in the graph
+  loader. They're recorded in <code>docs/CAREERCRAFT-INTEGRATION.md</code> §9.6.
+</div>
+<ul>
+  <li><strong>The totals rule only reads names.</strong> It misses portfolio lines without "Total" ("Health Services",
+    $5.6bn) and bundles ("…Fuel Resilience Package", $14.8bn, whose components are also listed). "Package" isn't in
+    the rule because most packages are real initiatives. The fix is for the extractor to tag each figure as measure,
+    total, revenue or balance.</li>
+  <li><strong>Site-level repeats.</strong> "Warradale Barracks Housing Development" carries the Housing Fast-Track
+    Fund's $500m and shows as its own bar. The merge leaves it, rather than risk hiding a measure.</li>
+  <li><strong>Units.</strong> The flag can't tell whether a $000 cell was converted.</li>
+  <li><strong>Mixed extractions.</strong> Each entity is one (type, name) whose attributes are merged key by key, so
+    amount, period and source can come from different documents. For example, AUKUS shows $30bn, labelled "state".
+    The fix is to store each extraction's amount, period and document as one record.</li>
+</ul>
+
+<h2 id="consumers">Consumers &amp; verification</h2>
+<ul>
+  <li><strong>CareerCraft:</strong> edge-function ops <code>budget-periods</code> / <code>budget-allocations</code> /
+    <code>budget-funders</code> pass the response through unchanged → <code>lib/horusKnowledge.ts</code> →
+    <code>useBudgetIntelligence</code> → <code>PolicyVisualizer.tsx</code>.</li>
+  <li><strong>Verify:</strong> <code>pnpm exec tsx scripts/verify-budget-router.ts [--tenant careercraft] [--period 2026-27]</code>.
+    It's read-only and safe to run against prod. It covers:
+    <ul>
+      <li>18 corroboration cases</li>
+      <li>the period order</li>
+      <li>the ranking</li>
+      <li>merging, including the Fast-Track regression</li>
+      <li>the totals exclusion</li>
+      <li>stable quote choice</li>
+      <li>citation coverage</li>
+      <li>jurisdiction labels and filtering before LIMIT</li>
+      <li>funders</li>
+      <li>tenant isolation</li>
+      <li>empty periods</li>
+    </ul>
+  </li>
+  <li><strong>Index:</strong> <code>document_entities("entityId")</code>, which serves the jurisdiction lookup.</li>
+  <li><strong>Background:</strong> <code>docs/CAREERCRAFT-INTEGRATION.md</code> §9.</li>
+</ul>
+
+<footer>Updated 2026-10-02 to match the post-review router. Not yet committed or deployed.</footer>
+
+</div>
+</body>
+</html>
