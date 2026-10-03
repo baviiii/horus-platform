@@ -156,11 +156,15 @@ export async function POST(req: Request) {
     data: { sessionId: session.id, role: 'USER', content: message },
   });
 
-  const history = await prisma.chatMessage.findMany({
-    where: { sessionId: session.id, role: { in: ['USER', 'ASSISTANT'] } },
-    orderBy: { createdAt: 'asc' },
-    take: HISTORY_TURNS * 2,
-  });
+  // Newest turns, then back into reading order — `asc` + `take` returned the
+  // oldest turns, dropping the message just saved once a session ran long.
+  const history = (
+    await prisma.chatMessage.findMany({
+      where: { sessionId: session.id, role: { in: ['USER', 'ASSISTANT'] } },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_TURNS * 2,
+    })
+  ).reverse();
 
   const [mcpServers] = await Promise.all([
     tenantMcpServers(tenant.id),

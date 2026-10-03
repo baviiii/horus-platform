@@ -74,8 +74,15 @@ Rules:
 - Ground every claim in retrieved passages and cite them inline as [n], using the numbers from tool results.
 - If the knowledge base has nothing relevant, say so plainly — then use web search if it is available, or suggest what the user could connect. Never invent an answer.
 - Use fetch_page only when the user shares a URL mid-conversation or explicitly asks about a live page.
-- For questions about how things CONNECT — which programs fund a sector, what skills an occupation needs, what an organization delivers — call graph_lookup on the key entity, then search_knowledge for supporting passages. Cite both.
-- Answers may be spoken aloud by a voice interface: be concise and conversational. Prefer a short direct answer followed by brief supporting detail.`;
+- For questions about how things CONNECT — which programs fund a sector, what skills an occupation needs, what an organization delivers — call graph_lookup on the key entity, then search_knowledge for supporting passages. Cite both.`;
+
+/**
+ * Voice and length when the caller supplies no persona. It used to sit in
+ * SYSTEM_PROMPT, which meant a consumer's persona asking for a structured or
+ * fuller answer contradicted a standing "be concise" — and lost. Style is the
+ * persona's to set; the rules above are not.
+ */
+const DEFAULT_STYLE = `\n\nAnswers may be spoken aloud by a voice interface: be concise and conversational. Prefer a short direct answer followed by brief supporting detail.`;
 
 async function describeSources(scope: ToolScope): Promise<string> {
   try {
@@ -209,7 +216,7 @@ export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
 
   const personaNote = params.persona
     ? `\n\nYou are ${params.personaName ?? 'an assistant'}. ${params.persona}`
-    : '';
+    : DEFAULT_STYLE;
 
   const thread = await client.threads.create({ abortSignal: signal });
   try {

@@ -20,6 +20,23 @@ export interface AgentCitation {
   url?: string;
   sourceType: 'url' | 'pdf' | 'web';
   snippet: string;
+  /** Page the passage sits on — indexer-pipeline PDF chunks only. */
+  pageNumber?: number;
+}
+
+/**
+ * Content Understanding leaves layout artefacts in chunk text: HTML comments
+ * for page furniture (`<!-- PageFooter: … -->`, `<!-- PageNumber: 7 -->`) and
+ * markdown placeholders for figures. Useful to the extractor, noise to a
+ * reader and to the model. Same rules as CareerCraft's horus-rag excerpts.
+ */
+function cleanPassage(text: string): string {
+  return text
+    .replace(/<!--[\s\S]*?-->/g, ' ')
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, ' ')
+    .replace(/[ \t]{2,}/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 /** Numbers citations across the whole turn; dedupes by citation target. */
@@ -32,6 +49,7 @@ export class CitationRegistry {
     url?: string;
     sourceType: AgentCitation['sourceType'];
     snippet: string;
+    pageNumber?: number;
   }): number {
     const existing = this.byKey.get(params.key);
     if (existing) return existing.n;
@@ -41,6 +59,7 @@ export class CitationRegistry {
       url: params.url,
       sourceType: params.sourceType,
       snippet: params.snippet.slice(0, 240),
+      ...(params.pageNumber !== undefined && { pageNumber: params.pageNumber }),
     };
     this.byKey.set(params.key, citation);
     return citation.n;
@@ -158,15 +177,26 @@ export async function executeSearchKnowledge(
   return hits
     .map((hit) => {
       const isWeb = hit.sourceType === 'url';
+      const content = cleanPassage(hit.content);
       const n = registry.register({
-        key: isWeb ? hit.sourceUrl : `${hit.sourceId}:pdf`,
+        // A PDF citation is a page when the chunk knows its page, so [n]
+        // points somewhere a reader can open. Keyed per document only when
+        // it doesn't — then every chunk of that PDF shares one number.
+        key: isWeb
+          ? hit.sourceUrl
+          : hit.pageNumber !== undefined
+            ? `${hit.sourceId}:p${hit.pageNumber}`
+            : `${hit.sourceId}:pdf`,
         title: hit.title,
         url: isWeb ? hit.sourceUrl : undefined,
         sourceType: hit.sourceType,
-        snippet: hit.content,
+        snippet: content,
+        ...(hit.pageNumber !== undefined && { pageNumber: hit.pageNumber }),
       });
-      const where = isWeb ? hit.sourceUrl : `${hit.title} (uploaded PDF)`;
-      return `[${n}] ${hit.title} — ${where}\n${hit.content.slice(0, PASSAGE_CHARS)}`;
+      const where = isWeb
+        ? hit.sourceUrl
+        : `${hit.title} (uploaded PDF${hit.pageNumber !== undefined ? `, p. ${hit.pageNumber}` : ''})`;
+      return `[${n}] ${hit.title} — ${where}\n${content.slice(0, PASSAGE_CHARS)}`;
     })
     .join('\n\n---\n\n');
 }

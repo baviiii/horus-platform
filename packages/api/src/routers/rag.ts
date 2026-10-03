@@ -35,11 +35,22 @@ Rules:
 - Cite every factual claim inline as [n], using the passage numbers given.
 - If the passages do not answer the question, say so plainly. Never fill the gap from general knowledge.
 - Quote figures exactly as written; do not round, convert, or infer totals.
-- Be direct. Lead with the answer, then the supporting detail.
 
 Return ONLY JSON: { "answer": string, "confidence": number between 0 and 1, "answered": boolean }
 
+Put your complete response inside "answer" as one string, in whatever format was asked for — nothing outside "answer" is read.
 "confidence" reflects how well the passages support the answer. "answered" is false when the passages simply don't cover the question.`;
+
+/**
+ * Voice when the caller sends no systemPrompt of its own.
+ *
+ * This was a standing rule, so a caller asking for structured records got
+ * "be direct" stacked after its own format and lost. Worse, the model put
+ * those records under a JSON key of its own, and only `answer` is read below
+ * — CareerCraft's careers tab came back empty on every load. Style is the
+ * caller's; the rules above, and the envelope sentence, are not.
+ */
+const DEFAULT_STYLE = `Be direct. Lead with the answer, then the supporting detail.`;
 
 export const ragRouter = router({
   /**
@@ -102,7 +113,7 @@ export const ragRouter = router({
         task: 'rag.query',
         system: input.options.systemPrompt
           ? `${input.options.systemPrompt}\n\n${ANSWER_SYSTEM}`
-          : ANSWER_SYSTEM,
+          : `${DEFAULT_STYLE}\n\n${ANSWER_SYSTEM}`,
         messages: [{ role: 'user', content: `Question: ${input.query}\n\nPassages:\n${passages}` }],
         model: 'fast',
         temperature: 0.2,
@@ -206,7 +217,7 @@ export const ragRouter = router({
 
       const result = await infer({
         task: 'rag.chat',
-        system: ANSWER_SYSTEM,
+        system: `${DEFAULT_STYLE}\n\n${ANSWER_SYSTEM}`,
         messages: [
           ...history
             .reverse()

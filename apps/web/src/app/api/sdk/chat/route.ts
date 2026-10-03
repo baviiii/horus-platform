@@ -38,7 +38,19 @@ const PostSchema = z.object({
   sessionId: z.string().uuid().optional(),
   message: z.string().min(1).max(8000),
   model: z.enum(['fast', 'deep']).default('fast'),
+  // The consumer's voice for this conversation. It sets tone, audience and
+  // format; the grounding and citation rules stay Horus's and come first.
+  persona: z.string().max(8000).optional(),
+  personaName: z.string().max(80).optional(),
 });
+
+/**
+ * Passages per search_knowledge call. The agent default is 8; on the
+ * CareerCraft corpus 10 missed the passage that stated the answer, which is
+ * why rag.query uses 16 (docs/CAREERCRAFT-INTEGRATION.md §5.4). Same corpus,
+ * same floor.
+ */
+const SEARCH_TOP_K = 16;
 
 /** Tenant MCP connections attach as agent tools, same as the dashboard agent. */
 async function tenantMcpServers(tenantId: string): Promise<McpServerRef[]> {
@@ -84,7 +96,8 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return Response.json({ error: 'Invalid request body' }, { status: 400 });
   }
-  const { sessionId, message, model } = parsed.data;
+  const { sessionId, message, model, personaName } = parsed.data;
+  const persona = parsed.data.persona?.trim() || undefined;
 
   const verdict = await moderateText(message);
   if (verdict.blocked) {
@@ -119,11 +132,16 @@ export async function POST(req: Request) {
     data: { sessionId: session.id, role: 'USER', content: message },
   });
 
-  const history = await prisma.chatMessage.findMany({
-    where: { sessionId: session.id, role: { in: ['USER', 'ASSISTANT'] } },
-    orderBy: { createdAt: 'asc' },
-    take: HISTORY_TURNS * 2,
-  });
+  // Newest turns, then back into reading order. This was `asc` + `take`, which
+  // returns the OLDEST turns: from the ninth exchange on, the message just
+  // saved above fell outside the window and the agent answered an old one.
+  const history = (
+    await prisma.chatMessage.findMany({
+      where: { sessionId: session.id, role: { in: ['USER', 'ASSISTANT'] } },
+      orderBy: { createdAt: 'desc' },
+      take: HISTORY_TURNS * 2,
+    })
+  ).reverse();
 
   const [mcpServers] = await Promise.all([
     tenantMcpServers(tenant.id),
@@ -162,6 +180,8 @@ export async function POST(req: Request) {
           content: m.content,
         })),
         model,
+        topK: SEARCH_TOP_K,
+        ...(persona && { persona, personaName }),
         mcpServers,
         emit,
         signal: req.signal,
