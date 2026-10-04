@@ -547,14 +547,16 @@ large, 2026-09-29: **5/5**, with margins of 0.185 / 0.254 / 0.183 / **0.078** /
 
 ## 11. Still open
 
-1. **Wave 2 — the agentic collapse.** The Horus agent already does multi-step
-   tool use server-side (it reformulated "how many workers…" into a
-   `search_knowledge` call on its own). That means `useAgenticRAG`'s ~1,000
-   lines of browser-side planning, step execution and context assembly is
-   re-implementing what `streamHorusChat` gives in one call. Replacing it
-   retires `agentic-planner` and most of the hook.
-2. **`intersection-reasoning` has no Horus equivalent yet.** `useAgenticRAG`
-   still calls the legacy endpoint for contradiction/theme analysis.
+1. ~~**Wave 2 — the agentic collapse.**~~ **Done 2026-10-04.** CareerCraft's
+   Career Coach now talks to `/api/sdk/chat` through its `coach-chat` edge
+   function (persona read server-side from `chat_prompts`, spend recorded from
+   the `done` frame). `useAgenticRAG`, `useEnterpriseRAG` and the browser-side
+   planner are deleted. Prerequisites shipped here: newest-first history,
+   `persona`/`personaName` on sdk/chat, `topK: 16`, per-page PDF citations
+   with `pageNumber`, cleaned passages, and style split from rules in both the
+   agent prompt and `rag.query`.
+2. **`intersection-reasoning` has no Horus equivalent yet.** Nothing in
+   CareerCraft calls the legacy endpoint any more (useAgenticRAG is gone).
    `intelligence.contradictions` is the intended replacement and is still a
    stub — but the graph now holds 46 `contradicts` edges and both budget years,
    so the hard part is done.
