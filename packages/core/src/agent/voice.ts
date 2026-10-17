@@ -59,6 +59,36 @@ export interface VoiceSessionScope {
   sessionId: string;
 }
 
+/**
+ * A listen-only session for spoken answers (Faircopy's interview practice,
+ * via the interview-coach MCP). The candidate speaks; the transcript streams
+ * back; the model never replies on its own (`create_response: false`), so the
+ * same input transcription the knowledge agent already uses becomes a
+ * dictation channel. The browser may still send `response.create` to have the
+ * interviewer read a question aloud — the instructions pin it to exactly that.
+ */
+export function buildListenSessionConfig(deployment: string): Record<string, unknown> {
+  return {
+    type: 'realtime',
+    model: deployment,
+    instructions:
+      "You are an interviewer's voice in a practice interview. Speak only when asked to read a question aloud: read it exactly as written, naturally and at an even pace. Never answer, comment on, or evaluate anything the candidate says.",
+    audio: {
+      input: {
+        transcription: { model: 'whisper-1', language: 'en' },
+        // Long pauses are normal mid-answer; don't cut a sentence in two.
+        turn_detection: {
+          type: 'server_vad',
+          create_response: false,
+          interrupt_response: false,
+          silence_duration_ms: 1200,
+        },
+      },
+      output: { voice: VOICE },
+    },
+  };
+}
+
 /** The `session` payload for the realtime client_secrets mint call. */
 export async function buildVoiceSessionConfig(
   scope: VoiceSessionScope,

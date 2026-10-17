@@ -14,4 +14,8 @@ export {
   type AgentCitation,
   type ToolScope,
 } from './tools.js';
-export { buildVoiceSessionConfig, type VoiceSessionScope } from './voice.js';
+export {
+  buildListenSessionConfig,
+  buildVoiceSessionConfig,
+  type VoiceSessionScope,
+} from './voice.js';
