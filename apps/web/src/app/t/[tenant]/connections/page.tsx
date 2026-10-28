@@ -4,16 +4,17 @@ import { Reveal } from '@/components/motion';
 import { Button } from '@/components/ui/button';
 import { checkMcpHealth, listMcpTools, type McpServerRef } from '@horus/core/mcp';
 import { PLAYGROUND } from '@/app/api/playground/_lib/config';
-import { requireTenantMember } from '@/lib/tenant-context';
+import { isPlatformAdmin, requireTenantMember } from '@/lib/tenant-context';
 import { addConnectionAction, removeConnectionAction, testConnectionsAction } from './actions';
 
 export const metadata = { title: 'Connections · Horus' };
 export const dynamic = 'force-dynamic';
 
 /**
- * What this workspace is connected to — the platform stack it runs on and
- * the tool servers (MCP) its agents can call. Tool-server status is a live
- * probe: Horus connects as an MCP client and lists tools on every render.
+ * What this workspace is connected to — the tool servers (MCP) its agents can
+ * call and, for Horus operators only, the platform stack and playground demo
+ * servers behind every tenant. Tool-server status is a live probe: Horus
+ * connects as an MCP client and lists tools on every render.
  */
 
 interface PlatformService {
@@ -97,13 +98,14 @@ async function probe(
   }
 }
 
-async function toolServers(tenantId: string): Promise<ToolServer[]> {
+async function toolServers(tenantId: string, includeDemo: boolean): Promise<ToolServer[]> {
+  // Demo servers feed the public playground, not tenant agents — operators only.
   const servers: Array<{
     ref: McpServerRef;
     name: string;
     source: ToolServer['source'];
     id?: string;
-  }> = PLAYGROUND.mcpServers.map((ref) => ({
+  }> = (includeDemo ? PLAYGROUND.mcpServers : []).map((ref) => ({
     ref,
     name: ref.label.replace(/_/g, ' '),
     source: 'platform demo' as const,
@@ -149,8 +151,9 @@ function StatusPill({ ok, label }: { ok: boolean; label?: string }) {
 export default async function ConnectionsPage({ params }: { params: Promise<{ tenant: string }> }) {
   const { tenant: slug } = await params;
   const { tenant, user } = await requireTenantMember(slug);
-  const stack = platformStack();
-  const servers = await toolServers(tenant.id);
+  const operator = isPlatformAdmin(user.email);
+  const stack = operator ? platformStack() : [];
+  const servers = await toolServers(tenant.id, operator);
 
   const configured = stack.filter((s) => s.endpoint).length;
   const liveServers = servers.filter((s) => s.ok).length;
@@ -166,7 +169,7 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ te
       <PageHeader
         eyebrow="Connections"
         title="Everything this workspace is wired to."
-        description="The platform stack Horus runs on, plus the tool servers (MCP) your agents can call. Tool-server status is probed live — Horus connects as an MCP client and lists what each server offers."
+        description={`${operator ? 'The platform stack Horus runs on, plus the' : 'The'} tool servers (MCP) your agents can call. Tool-server status is probed live — Horus connects as an MCP client and lists what each server offers.`}
         actions={
           <form action={testAll}>
             <Button variant="outline" size="sm" type="submit">
@@ -176,36 +179,40 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ te
         }
       />
 
-      <div className="reveal-stagger grid gap-4 md:grid-cols-4">
-        <StatCard label="Platform services" value={`${configured}/${stack.length}`} />
+      <div
+        className={`reveal-stagger grid gap-4 ${operator ? 'md:grid-cols-4' : 'md:grid-cols-3'}`}
+      >
+        {operator && <StatCard label="Platform services" value={`${configured}/${stack.length}`} />}
         <StatCard label="Tool servers" value={String(servers.length)} />
         <StatCard label="Live now" value={String(liveServers)} />
         <StatCard label="Agent tools available" value={String(totalTools)} />
       </div>
 
       <Reveal as="div" className="mt-8 space-y-6">
-        <Panel
-          title="Platform stack"
-          description="Azure services this deployment is configured against."
-        >
-          <ul className="divide-hairline -my-2 divide-y">
-            {stack.map((s) => (
-              <li key={s.name} className="flex flex-wrap items-center gap-3 py-3">
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-ink text-[14px] font-medium">{s.name}</span>
-                    <Pill>{s.kind}</Pill>
+        {operator && (
+          <Panel
+            title="Platform stack"
+            description="Azure services this deployment is configured against."
+          >
+            <ul className="divide-hairline -my-2 divide-y">
+              {stack.map((s) => (
+                <li key={s.name} className="flex flex-wrap items-center gap-3 py-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-ink text-[14px] font-medium">{s.name}</span>
+                      <Pill>{s.kind}</Pill>
+                    </div>
+                    <div className="font-technical text-ink-mute mt-0.5 truncate text-[11.5px]">
+                      {s.endpoint ?? 'not configured'}
+                      {s.detail ? `  ·  ${s.detail}` : ''}
+                    </div>
                   </div>
-                  <div className="font-technical text-ink-mute mt-0.5 truncate text-[11.5px]">
-                    {s.endpoint ?? 'not configured'}
-                    {s.detail ? `  ·  ${s.detail}` : ''}
-                  </div>
-                </div>
-                <StatusPill ok={Boolean(s.endpoint)} label={s.endpoint ? 'configured' : 'off'} />
-              </li>
-            ))}
-          </ul>
-        </Panel>
+                  <StatusPill ok={Boolean(s.endpoint)} label={s.endpoint ? 'configured' : 'off'} />
+                </li>
+              ))}
+            </ul>
+          </Panel>
+        )}
 
         <Panel
           title="Tool servers · MCP"

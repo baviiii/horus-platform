@@ -17,7 +17,7 @@ export default async function TenantLayout({
   };
   const tenantName = branding.name || tenant.name;
 
-  const [openAlerts, overdueIncidents, myMemberships] = await Promise.all([
+  const [openAlerts, overdueIncidents, myMemberships, incidentsModule] = await Promise.all([
     prisma.alert.count({
       where: { tenantId: tenant.id, status: 'OPEN' },
     }),
@@ -32,6 +32,11 @@ export default async function TenantLayout({
       where: { userId: user.id, tenant: { isActive: true } },
       include: { tenant: { select: { slug: true, name: true } } },
       orderBy: { joinedAt: 'asc' },
+    }),
+    // Incident reporting is a vertical (NDIS), not part of every workspace.
+    prisma.tenantModule.findUnique({
+      where: { tenantId_moduleKey: { tenantId: tenant.id, moduleKey: 'incidents' } },
+      select: { id: true },
     }),
   ]);
 
@@ -64,12 +69,16 @@ export default async function TenantLayout({
         { href: `/t/${slug}/documents`, label: 'Documents', icon: <IconDoc /> },
         { href: `/t/${slug}/intelligence`, label: 'Intelligence', icon: <IconIntel /> },
         { href: `/t/${slug}/graph`, label: 'Knowledge graph', icon: <IconGraph /> },
-        {
-          href: `/t/${slug}/incidents`,
-          label: 'Incidents',
-          icon: <IconIncident />,
-          ...(overdueIncidents > 0 && { badge: String(overdueIncidents) }),
-        },
+        ...(incidentsModule
+          ? [
+              {
+                href: `/t/${slug}/incidents`,
+                label: 'Incidents',
+                icon: <IconIncident />,
+                ...(overdueIncidents > 0 && { badge: String(overdueIncidents) }),
+              },
+            ]
+          : []),
         { href: `/t/${slug}/connections`, label: 'Connections', icon: <IconPlug /> },
         {
           href: `/t/${slug}/alerts`,

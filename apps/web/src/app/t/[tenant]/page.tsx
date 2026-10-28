@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { prisma } from '@horus/db';
 import { PageHeader, Panel, Pill, StatCard } from '@/components/app/shell';
 import { Reveal } from '@/components/motion';
+import { membersWithIdentity } from '@/lib/members';
 import { requireTenantMember } from '@/lib/tenant-context';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export default async function TenantOverview({ params }: { params: Promise<{ ten
       orderBy: { createdAt: 'desc' },
       take: 3,
     }),
-    prisma.tenantMember.findMany({ where: { tenantId: tenant.id }, orderBy: { joinedAt: 'asc' } }),
+    membersWithIdentity(tenant.id),
     prisma.connection.count({ where: { tenantId: tenant.id } }),
     prisma.document.findMany({
       where: { tenantId: tenant.id },
@@ -225,16 +226,19 @@ export default async function TenantOverview({ params }: { params: Promise<{ ten
               return (
                 <li key={m.id} className="flex items-center gap-3 px-2 py-3">
                   <span className="bg-accent/10 text-accent grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-semibold">
-                    {isYou ? user.initials : m.userId.slice(0, 2).toUpperCase()}
+                    {isYou ? user.initials : (m.email ?? m.userId).slice(0, 2).toUpperCase()}
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="text-ink truncate text-[13.5px] font-medium">
-                      {isYou ? `${user.displayName} (you)` : `Member ${m.userId.slice(0, 8)}`}
+                      {isYou
+                        ? `${user.displayName} (you)`
+                        : (m.email ?? `Member ${m.userId.slice(0, 8)}`)}
                     </div>
                     <div className="text-ink-faded truncate text-[11.5px]">
                       {isYou ? user.email : `joined ${m.joinedAt.toLocaleDateString()}`}
                     </div>
                   </div>
+                  {m.isHorusTeam && <Pill>Horus team</Pill>}
                   <Pill tone={m.role === 'OWNER' ? 'accent' : 'default'}>{m.role}</Pill>
                 </li>
               );

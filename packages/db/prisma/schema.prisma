@@ -48,6 +48,7 @@ model Tenant {
   updatedAt     DateTime @updatedAt
 
   members        TenantMember[]
+  invites        TenantInvite[]
   apiKeys        ApiKey[]
   documents      Document[]
   chunks         Chunk[]
@@ -88,6 +89,27 @@ model TenantMember {
   @@unique([tenantId, userId])
   @@index([userId])
   @@map("tenant_members")
+}
+
+// An invitation is claimed by email, not by link: when someone signs in with
+// a confirmed address matching a pending invite, they join that tenant.
+model TenantInvite {
+  id         String    @id @default(uuid()) @db.Uuid
+  tenantId   String    @db.Uuid
+  email      String // lowercased
+  role       Role      @default(MEMBER)
+  invitedBy  String    @db.Uuid
+  expiresAt  DateTime
+  acceptedAt DateTime?
+  acceptedBy String?   @db.Uuid
+  revokedAt  DateTime?
+  createdAt  DateTime  @default(now())
+
+  tenant Tenant @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+
+  @@index([tenantId])
+  @@index([email])
+  @@map("tenant_invites")
 }
 
 model TenantModule {

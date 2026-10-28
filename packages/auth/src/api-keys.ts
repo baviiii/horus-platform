@@ -9,6 +9,13 @@ const PREFIX_TEST = 'horus_sk_test_';
 
 export type ApiKeyEnv = 'live' | 'test';
 
+/**
+ * `createdById` on keys minted by operator scripts (mint-consumer-key,
+ * create-dev-key) rather than by a signed-in user. api_keys.created_by_id has
+ * no FK, so this synthetic id never collides with a real account.
+ */
+export const SYSTEM_KEY_CREATOR_ID = '00000000-0000-0000-0000-000000000001';
+
 export type GeneratedApiKey = {
   /** The full secret. Show ONCE on creation, never stored in plaintext. */
   plaintext: string;

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { prisma } from '@horus/db';
 import { getCurrentUser } from '@/lib/supabase/server';
+import { acceptPendingInvites } from '@/lib/invites';
 import { PageHeader, Panel, Pill } from '@/components/app/shell';
 import { Reveal } from '@/components/motion';
 
@@ -18,6 +19,8 @@ const ROLE_HINT: Record<string, string> = {
 export default async function WorkspacesPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login?next=/workspaces');
+
+  await acceptPendingInvites(user);
 
   const memberships = await prisma.tenantMember.findMany({
     where: { userId: user.id, tenant: { isActive: true } },

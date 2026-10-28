@@ -26,6 +26,8 @@ export interface AuthFormProps {
   plan?: string | null;
   /** Error surfaced from a redirect (e.g. failed OAuth callback). */
   initialError?: string | null;
+  /** Joining someone else's workspace via invite — nothing of their own to name. */
+  invited?: boolean;
 }
 
 interface Notice {
@@ -33,8 +35,9 @@ interface Notice {
   body: React.ReactNode;
 }
 
-export function AuthForm({ mode, next, plan, initialError }: AuthFormProps) {
+export function AuthForm({ mode, next, plan, initialError, invited }: AuthFormProps) {
   const isSignup = mode === 'signup';
+  const askWorkspaceName = isSignup && !invited;
 
   const [method, setMethod] = useState<Method>('password');
   const [email, setEmail] = useState('');
@@ -125,7 +128,9 @@ export function AuthForm({ mode, next, plan, initialError }: AuthFormProps) {
                 We sent a confirmation link to <span className="text-ink font-medium">{email}</span>
                 .
                 <br />
-                Click it to finish creating your workspace.
+                {invited
+                  ? 'Click it to join the workspace you were invited to.'
+                  : 'Click it to finish creating your workspace.'}
               </>
             ),
           });
@@ -254,7 +259,7 @@ export function AuthForm({ mode, next, plan, initialError }: AuthFormProps) {
 
       {method === 'password' ? (
         <form onSubmit={handlePasswordSubmit} className="space-y-4">
-          {isSignup && (
+          {askWorkspaceName && (
             <Field label="Workspace name" hint="You can change this later.">
               <input
                 type="text"
@@ -331,13 +336,15 @@ export function AuthForm({ mode, next, plan, initialError }: AuthFormProps) {
             </Field>
           )}
 
-          <SubmitButton loading={loading}>{isSignup ? 'Create workspace' : 'Sign in'}</SubmitButton>
+          <SubmitButton loading={loading}>
+            {isSignup ? (invited ? 'Create account' : 'Create workspace') : 'Sign in'}
+          </SubmitButton>
 
           {error && <ErrorNote>{error}</ErrorNote>}
         </form>
       ) : (
         <form onSubmit={handleMagicSubmit} className="space-y-4">
-          {isSignup && (
+          {askWorkspaceName && (
             <Field label="Workspace name" hint="You can change this later.">
               <input
                 type="text"

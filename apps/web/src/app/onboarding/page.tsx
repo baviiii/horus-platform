@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser } from '@/lib/supabase/server';
 import { isPlatformAdmin } from '@/lib/tenant-context';
+import { acceptPendingInvites } from '@/lib/invites';
 import { prisma } from '@horus/db';
 
 function slugify(input: string): string {
@@ -26,6 +27,10 @@ async function uniqueSlug(base: string): Promise<string> {
 export default async function OnboardingPage() {
   const user = await getCurrentUser();
   if (!user) redirect('/login?next=/onboarding');
+
+  // Invited? Join that workspace instead of minting an empty one.
+  const joined = await acceptPendingInvites(user);
+  if (joined.length > 0) redirect(`/t/${joined[0]}`);
 
   // Already a member of a tenant? Bounce them in.
   const existing = await prisma.tenantMember.findFirst({

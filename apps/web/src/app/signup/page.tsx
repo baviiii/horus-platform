@@ -11,6 +11,7 @@ function SignupContent() {
   const params = useSearchParams();
   const planParam = params.get('plan');
   const errorParam = params.get('error');
+  const invited = params.get('invited') === '1';
 
   return (
     <Aurora intensity={1.2}>
@@ -96,10 +97,12 @@ function SignupContent() {
               <div className="from-accent/15 pointer-events-none absolute -inset-px -z-10 rounded-3xl bg-gradient-to-b via-transparent to-transparent blur-xl" />
               <div className="mb-6">
                 <h2 className="text-ink text-[26px] font-semibold tracking-tight">
-                  Create your workspace
+                  {invited ? 'Join your workspace' : 'Create your workspace'}
                 </h2>
                 <p className="text-ink-faded mt-1.5 text-[14px]">
-                  We'll spin up your tenant and drop you straight in.
+                  {invited
+                    ? 'Use the email address your invite was sent to and you’ll land straight in.'
+                    : "We'll spin up your tenant and drop you straight in."}
                 </p>
               </div>
 
@@ -108,6 +111,7 @@ function SignupContent() {
                 next="/onboarding"
                 plan={planParam}
                 initialError={errorParam}
+                invited={invited}
               />
             </div>
 

@@ -4,15 +4,16 @@ import { notFound, redirect } from 'next/navigation';
 import { prisma } from '@horus/db';
 import type { Tenant } from '@horus/db';
 import { getCurrentUser } from '@/lib/supabase/server';
+import { acceptPendingInvites } from '@/lib/invites';
 
 /**
  * Server-side access layer for the tenant dashboard.
  *
  * Every /t/[tenant] page calls requireTenantMember: resolves the Supabase
- * session, loads the tenant by slug, and verifies membership. Emails listed
- * in HORUS_ADMIN_EMAILS auto-claim OWNER on any tenant (so the platform
- * owner can walk into seeded workspaces like `careercraft` without an
- * invite flow).
+ * session, loads the tenant by slug, and verifies membership. A pending
+ * invite for the user's confirmed address is claimed on the spot. Emails
+ * listed in HORUS_ADMIN_EMAILS auto-claim OWNER on any tenant (so the
+ * platform operator can walk into any workspace).
  */
 
 export interface DashboardUser {
@@ -74,6 +75,10 @@ export const requireTenantMember = cache(async (slug: string): Promise<TenantCon
     if (email && adminEmails().has(email)) {
       member = await prisma.tenantMember.create({
         data: { tenantId: tenant.id, userId: user.id, role: 'OWNER' },
+      });
+    } else if ((await acceptPendingInvites(user)).includes(slug)) {
+      member = await prisma.tenantMember.findUniqueOrThrow({
+        where: { tenantId_userId: { tenantId: tenant.id, userId: user.id } },
       });
     } else {
       redirect('/onboarding');
