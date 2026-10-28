@@ -68,3 +68,14 @@ crash.*.log
 graph-extract.json
 graph-extract.json.tmp
 graph-load.sql
+
+# State corpora (NSW..NT) - local only until the corpus is finished
+seed-corpus/NSW/
+seed-corpus/VIC/
+seed-corpus/QLD/
+seed-corpus/WA/
+seed-corpus/TAS/
+seed-corpus/ACT/
+seed-corpus/NT/
+seed-corpus/MISSING.md
+seed-corpus/fetch_state_sources.py
