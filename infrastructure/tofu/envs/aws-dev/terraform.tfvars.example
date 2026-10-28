@@ -18,3 +18,28 @@ vector_dimensions = 1024
 app_origins = []
 
 create_app_access_key = true
+
+# ── interview-coach-mcp on Lambda (mcp.tf) ──────────────────────────────────
+# First apply: leave mcp_image_tag commented out. After CI has pushed an image,
+# set it to that commit SHA and apply again.
+# mcp_image_tag = "cf50c86"
+
+mcp_cors_origin = "*"
+
+mcp_settings = {
+  HORUS_MODE    = "http"
+  HORUS_TENANT  = "careercraft"
+  HORUS_BASE_URL = "https://<careercraft-project>.supabase.co/functions/v1"
+  SUPABASE_URL  = "https://<project>.supabase.co"
+  MARKET        = "Australia"
+  RESEARCH_MODE = "auto"
+}
+
+mcp_secrets = {
+  SUPABASE_ANON_KEY = "..."
+  HORUS_API_KEY     = "..."
+  # Free from reddit.com/prefs/apps; without them Reddit drops out of research
+  # on datacenter IPs.
+  # REDDIT_CLIENT_ID     = "..."
+  # REDDIT_CLIENT_SECRET = "..."
+}

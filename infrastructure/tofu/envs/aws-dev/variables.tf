@@ -88,3 +88,68 @@ variable "create_app_access_key" {
   type        = bool
   default     = true
 }
+
+# ── interview-coach-mcp (mcp.tf) ────────────────────────────────────────────
+
+variable "mcp_image_tag" {
+  description = <<-EOT
+    Image tag (commit SHA) to create the MCP function from. Leave null for the
+    first apply: there is no image in the registry yet. Once CI has pushed one,
+    set it and apply again. After that, CI rolls new images itself.
+  EOT
+  type        = string
+  default     = null
+}
+
+variable "mcp_memory_mb" {
+  description = "Lambda memory for the MCP server. CPU scales with it; 1024 matches the 0.5 vCPU / 1 GiB container on Azure."
+  type        = number
+  default     = 1024
+}
+
+variable "mcp_timeout_seconds" {
+  description = "Longest a single MCP request may run. Must outlast research plus one model call (LLM_TIMEOUT_MS)."
+  type        = number
+  default     = 300
+
+  validation {
+    condition     = var.mcp_timeout_seconds >= 30 && var.mcp_timeout_seconds <= 900
+    error_message = "mcp_timeout_seconds must be 30-900 (Lambda's maximum is 15 minutes)."
+  }
+}
+
+variable "mcp_cors_origin" {
+  description = "CORS_ORIGIN for the MCP server. \"*\" is low-risk (every call needs a bearer JWT, no cookies); tighten to the Faircopy domain once it exists."
+  type        = string
+  default     = "*"
+}
+
+variable "mcp_settings" {
+  description = <<-EOT
+    Plain MCP server settings, as env vars: HORUS_MODE, HORUS_TENANT,
+    HORUS_BASE_URL, HORUS_RAG_URL, HORUS_GRAPH_URL, HORUS_VOICE_URL,
+    SUPABASE_URL, MARKET, RESEARCH_MODE, GROUNDING_MODE, … NODE_ENV, PORT,
+    CORS_ORIGIN and the AWS_LWA_* adapter settings are set by mcp.tf.
+  EOT
+  type        = map(string)
+  default     = {}
+}
+
+variable "mcp_secrets" {
+  description = "Secret MCP settings, as env vars: SUPABASE_ANON_KEY, HORUS_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, … Kept in gitignored tfvars and local state."
+  type        = map(string)
+  default     = {}
+  sensitive   = true
+}
+
+variable "mcp_github_repo" {
+  description = "owner/repo whose main branch may deploy the MCP image (GitHub OIDC)."
+  type        = string
+  default     = "baviiii/interview-coach-mcp"
+}
+
+variable "create_github_oidc_provider" {
+  description = "Create the account's GitHub Actions OIDC provider. Set false if the account already has one; there can only be one per account."
+  type        = bool
+  default     = true
+}

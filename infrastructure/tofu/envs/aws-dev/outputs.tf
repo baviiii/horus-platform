@@ -46,3 +46,22 @@ output "app_secret_access_key" {
   value     = var.create_app_access_key ? aws_iam_access_key.app[0].secret : null
   sensitive = true
 }
+
+output "mcp_ecr_repository_url" {
+  description = "Where CI pushes the MCP image."
+  value       = aws_ecr_repository.mcp.repository_url
+}
+
+output "mcp_function_name" {
+  value = local.mcp_name
+}
+
+output "mcp_url" {
+  description = "Public URL of the MCP server. Goes into Faircopy's VITE_INTERVIEW_MCP_URL. Null until mcp_image_tag is set."
+  value       = local.mcp_deploy ? aws_lambda_function_url.mcp[0].function_url : null
+}
+
+output "mcp_deploy_role_arn" {
+  description = "Role the MCP repo's GitHub Actions assume to push and roll images (AWS_DEPLOY_ROLE_ARN in that workflow)."
+  value       = aws_iam_role.mcp_deploy.arn
+}
