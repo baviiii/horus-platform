@@ -2,6 +2,7 @@ import { initTRPC, TRPCError } from '@trpc/server';
 import superjson from 'superjson';
 import { ZodError } from 'zod';
 import { hasAllScopes } from '@horus/auth';
+import { isAiUnavailable } from '@horus/core/provider';
 import type { Context } from './context.js';
 
 const t = initTRPC.context<Context>().create({
@@ -19,7 +20,26 @@ const t = initTRPC.context<Context>().create({
 
 export const router = t.router;
 export const middleware = t.middleware;
-export const publicProcedure = t.procedure;
+
+/**
+ * AI switched off (HORUS_AI_PROVIDER=off) surfaces as 503, not a generic 500,
+ * so SDK callers can tell "temporarily unavailable" from "broken".
+ */
+const mapAiUnavailable = middleware(async ({ next }) => {
+  const result = await next();
+  if (!result.ok && isAiUnavailable(result.error.cause)) {
+    throw new TRPCError({
+      code: 'SERVICE_UNAVAILABLE',
+      message: result.error.cause.message,
+      cause: result.error.cause,
+    });
+  }
+  return result;
+});
+
+const baseProcedure = t.procedure.use(mapAiUnavailable);
+
+export const publicProcedure = baseProcedure;
 
 const requireTenant = middleware(({ ctx, next }) => {
   if (!ctx.tenant || !ctx.db) {
@@ -28,7 +48,7 @@ const requireTenant = middleware(({ ctx, next }) => {
   return next({ ctx: { ...ctx, tenant: ctx.tenant, db: ctx.db } });
 });
 
-export const tenantProcedure = t.procedure.use(requireTenant);
+export const tenantProcedure = baseProcedure.use(requireTenant);
 
 const requireUser = requireTenant.unstable_pipe(({ ctx, next }) => {
   if (!ctx.user) {
@@ -37,7 +57,7 @@ const requireUser = requireTenant.unstable_pipe(({ ctx, next }) => {
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
-export const userProcedure = t.procedure.use(requireUser);
+export const userProcedure = baseProcedure.use(requireUser);
 
 export function scopedProcedure(...required: string[]) {
   const scopeCheck = requireTenant.unstable_pipe(({ ctx, next }) => {
@@ -49,7 +69,7 @@ export function scopedProcedure(...required: string[]) {
     }
     return next();
   });
-  return t.procedure.use(scopeCheck);
+  return baseProcedure.use(scopeCheck);
 }
 
 const requireSuperadmin = middleware(({ ctx, next }) => {
@@ -59,6 +79,6 @@ const requireSuperadmin = middleware(({ ctx, next }) => {
   return next({ ctx: { ...ctx, user: ctx.user } });
 });
 
-export const superadminProcedure = t.procedure.use(requireSuperadmin);
+export const superadminProcedure = baseProcedure.use(requireSuperadmin);
 
 export const createCaller = t.createCallerFactory;

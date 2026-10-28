@@ -11,3 +11,4 @@ export * as agent from './agent/index.js';
 export * as safety from './safety/index.js';
 export * as mcp from './mcp/index.js';
 export * as incidents from './incidents/index.js';
+export * as provider from './provider.js';

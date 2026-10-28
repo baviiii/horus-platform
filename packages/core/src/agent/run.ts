@@ -7,6 +7,9 @@
  * when connected. Each turn runs on a throwaway thread seeded with the
  * client-held history; run events stream out as the same AgentEvent shape
  * the playground UI already renders.
+ *
+ * With HORUS_AI_PROVIDER=aws the same call runs on Claude via Bedrock instead
+ * (`run-claude.ts`), under the same instructions and tools.
  */
 import type {
   Agent,
@@ -20,8 +23,17 @@ import type {
 } from '@azure/ai-agents';
 import { getAgentsClient } from '../clients/agents.js';
 import { resolveDeployment, type ModelTier } from '../inference/infer.js';
-import { listSessionSources } from '../knowledge/store.js';
 import { callMcpTool, listMcpTools, type McpServerRef } from '../mcp/client.js';
+import { aiProvider, assertAiAvailable } from '../provider.js';
+import {
+  describeSources,
+  MAX_TOOL_CALLS,
+  MAX_TOOL_ROUNDS,
+  mcpNote as mcpInstructions,
+  personaNote as personaInstructions,
+  SYSTEM_PROMPT,
+} from './instructions.js';
+import { runKnowledgeAgentOnClaude } from './run-claude.js';
 import {
   buildAgentTools,
   CitationRegistry,
@@ -63,47 +75,6 @@ export interface RunAgentParams {
 }
 
 const AGENT_NAME = 'horus-knowledge-agent';
-const MAX_TOOL_ROUNDS = 4;
-const MAX_TOOL_CALLS = 6;
-
-const SYSTEM_PROMPT = `You are a knowledge agent powered by Horus. The user has connected websites and documents to this session; that knowledge base is your source of truth.
-
-Rules:
-- Before answering any factual question, call search_knowledge with a well-phrased query. Re-search with different terms if the first pass misses.
-- When the user says "this website", "the document", "the company", or similar, they mean the connected sources listed in the session context. NEVER ask which source they mean or ask for a URL — search the knowledge base first and answer from what comes back.
-- Ground every claim in retrieved passages and cite them inline as [n], using the numbers from tool results.
-- If the knowledge base has nothing relevant, say so plainly — then use web search if it is available, or suggest what the user could connect. Never invent an answer.
-- Use fetch_page only when the user shares a URL mid-conversation or explicitly asks about a live page.
-- For questions about how things CONNECT — which programs fund a sector, what skills an occupation needs, what an organization delivers — call graph_lookup on the key entity, then search_knowledge for supporting passages. Cite both.`;
-
-/**
- * Voice and length when the caller supplies no persona. It used to sit in
- * SYSTEM_PROMPT, which meant a consumer's persona asking for a structured or
- * fuller answer contradicted a standing "be concise" — and lost. Style is the
- * persona's to set; the rules above are not.
- */
-const DEFAULT_STYLE = `\n\nAnswers may be spoken aloud by a voice interface: be concise and conversational. Prefer a short direct answer followed by brief supporting detail.`;
-
-async function describeSources(scope: ToolScope): Promise<string> {
-  try {
-    const sources = await listSessionSources(scope.indexName, scope.tenantId, scope.sessionId);
-    const scoped = scope.sourceIds
-      ? sources.filter((s) => scope.sourceIds!.includes(s.sourceId))
-      : sources;
-    if (scoped.length === 0) {
-      return 'Connected sources: none in the assigned collections. If the user asks a factual question, still try search_knowledge once, then tell them no documents are assigned to this agent yet.';
-    }
-    const lines = scoped
-      .map(
-        (s) =>
-          `- ${s.title || s.sourceUrl} (${s.sourceType === 'url' ? s.sourceUrl : 'uploaded PDF'}, ${s.chunkCount} chunks)`,
-      )
-      .join('\n');
-    return `Connected sources right now:\n${lines}`;
-  } catch {
-    return 'Connected sources: unavailable — use search_knowledge to discover what is indexed.';
-  }
-}
 
 // One agent per deployment, ensured once per process. Update-on-start keeps
 // the hosted definition in lockstep with this code (instructions + tools are
@@ -193,6 +164,9 @@ function bingCallCount(step: RunStep): number {
 }
 
 export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
+  assertAiAvailable();
+  if (aiProvider() === 'aws') return runKnowledgeAgentOnClaude(params);
+
   const { emit, signal } = params;
   const client = getAgentsClient();
   const deployment = resolveDeployment(params.model ?? 'fast');
@@ -209,14 +183,8 @@ export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
   let toolCallBudget = MAX_TOOL_CALLS;
 
   const mcp = params.mcpServers?.length ? await buildMcpToolset(params.mcpServers) : null;
-  const mcpNote =
-    mcp && mcp.labels.length > 0
-      ? `\n\nConnected tool servers: ${mcp.labels.join(', ')}. Use their tools directly whenever the user asks for those capabilities (coaching, interviews, planning, ...) — do not describe what you would do, call the tool.`
-      : '';
-
-  const personaNote = params.persona
-    ? `\n\nYou are ${params.personaName ?? 'an assistant'}. ${params.persona}`
-    : DEFAULT_STYLE;
+  const mcpNote = mcpInstructions(mcp?.labels ?? []);
+  const personaNote = personaInstructions(params.persona, params.personaName);
 
   const thread = await client.threads.create({ abortSignal: signal });
   try {

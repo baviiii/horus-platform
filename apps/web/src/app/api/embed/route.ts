@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { validateApiKey, hasAllScopes, SCOPES } from '@horus/auth';
 import { prisma } from '@horus/db';
 import { embed, EMBED_MAX_INPUTS } from '@horus/core/inference';
+import { aiOffResponse, aiErrorStatus } from '@/lib/ai-status';
 
 // bcryptjs (used by validateApiKey) needs Node, not the edge runtime.
 export const runtime = 'nodejs';
@@ -68,6 +69,9 @@ function readKey(req: Request): string | null {
 }
 
 export async function POST(req: Request) {
+  const aiOff = aiOffResponse();
+  if (aiOff) return aiOff;
+
   // 1. Authenticate.
   const token = readKey(req);
   if (!token) {
@@ -128,7 +132,7 @@ export async function POST(req: Request) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Embedding failed';
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: message }, { status: aiErrorStatus(err) });
   }
 
   // 5. Meter against the key's tenant. A ledger hiccup must not cost the

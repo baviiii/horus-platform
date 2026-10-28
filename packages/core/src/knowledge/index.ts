@@ -1,5 +1,6 @@
 // Knowledge pipeline — ingest (crawl/PDF → chunk → embed → index) and
-// hybrid retrieval over Azure AI Search, scoped by tenant + session.
+// retrieval over Azure AI Search (hybrid) or S3 Vectors (vector-only),
+// scoped by tenant + session.
 
 export { chunkText, type ChunkOptions, type TextChunk } from './chunk.js';
 export {
@@ -40,3 +41,4 @@ export {
   type SearchKnowledgeParams,
   type SourceChunk,
 } from './store.js';
+export { S3_VECTOR_DIMENSIONS } from './store-s3vectors.js';

@@ -11,6 +11,8 @@
  * must stay on the model the index was built with.
  */
 import { getOpenAIClient, MODELS } from '../clients/openai.js';
+import { titanDimensions, titanEmbed, titanModelId } from '../clients/bedrock-embeddings.js';
+import { aiProvider, assertAiAvailable } from '../provider.js';
 
 export type EmbedModel = 'small' | 'large';
 
@@ -43,6 +45,25 @@ export async function embed(input: string[], options: EmbedOptions = {}): Promis
   if (input.length === 0) throw new Error('embed() needs at least one input');
   if (input.length > EMBED_MAX_INPUTS) {
     throw new Error(`embed() takes at most ${EMBED_MAX_INPUTS} inputs, got ${input.length}`);
+  }
+  assertAiAvailable();
+
+  if (aiProvider() === 'aws') {
+    // Titan has one model; `small`/`large` only matter on Azure. Same budget
+    // as below: a fast failure lets the caller rank without similarity.
+    const result = await titanEmbed(
+      input.map((text) => text.slice(0, EMBED_MAX_CHARS)),
+      {
+        dimensions: titanDimensions(options.dimensions),
+        abortSignal: AbortSignal.timeout(8_000),
+      },
+    );
+    return {
+      vectors: result.vectors,
+      model: titanModelId(),
+      dimensions: result.dimensions,
+      tokens: result.tokens,
+    };
   }
 
   const deployment = options.model === 'large' ? MODELS.embedding : MODELS.embeddingSmall;

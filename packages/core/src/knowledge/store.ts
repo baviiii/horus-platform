@@ -7,9 +7,20 @@
  *
  * Retrieval is hybrid: BM25 keyword + HNSW vector in one query. Semantic
  * reranking is intentionally not requested — unavailable on the free tier.
+ *
+ * With HORUS_AI_PROVIDER=aws every function here delegates to the S3 Vectors
+ * implementation in `store-s3vectors.ts`, which keeps the same signatures.
  */
 import type { SearchClient, SearchIndex } from '@azure/search-documents';
 import { getSearchClient, getSearchIndexClient } from '../clients/azure-search.js';
+import { aiProvider, assertAiAvailable } from '../provider.js';
+import * as s3v from './store-s3vectors.js';
+
+/** Fail fast when AI is switched off; true when the store lives on S3 Vectors. */
+function onAws(): boolean {
+  assertAiAvailable();
+  return aiProvider() === 'aws';
+}
 
 /**
  * Vector width for the knowledge index.
@@ -140,6 +151,7 @@ const ensured = new Map<string, Promise<void>>();
  * on. Only a genuine "it isn't there" failure is fatal.
  */
 export function ensureKnowledgeIndex(indexName: string): Promise<void> {
+  if (onAws()) return s3v.ensureKnowledgeIndex(indexName);
   let pending = ensured.get(indexName);
   if (!pending) {
     const indexClient = getSearchIndexClient();
@@ -175,6 +187,7 @@ function client(indexName: string): SearchClient<KnowledgeChunkDoc> {
 const UPSERT_BATCH = 100;
 
 export async function upsertChunks(indexName: string, docs: KnowledgeChunkDoc[]): Promise<void> {
+  if (onAws()) return s3v.upsertChunks(indexName, docs);
   const search = client(indexName);
   for (let i = 0; i < docs.length; i += UPSERT_BATCH) {
     await search.mergeOrUploadDocuments(docs.slice(i, i + UPSERT_BATCH));
@@ -218,6 +231,7 @@ function facetFilter(base: string, filters: SearchKnowledgeParams['filters']): s
 
 /** Hybrid (keyword + vector) search scoped to one tenant + session. */
 export async function searchKnowledge(params: SearchKnowledgeParams): Promise<KnowledgeHit[]> {
+  if (onAws()) return s3v.searchKnowledge(params);
   const { indexName, tenantId, sessionId, query, vector, top = 8 } = params;
 
   const results = await client(indexName).search(query, {
@@ -269,6 +283,7 @@ export async function fetchSourceChunks(
   sourceId: string,
   maxChunks = 2000,
 ): Promise<SourceChunk[]> {
+  if (onAws()) return s3v.fetchSourceChunks(indexName, tenantId, sessionId, sourceId, maxChunks);
   const chunks: SourceChunk[] = [];
   const baseFilter = `${scopeFilter(tenantId, sessionId)} and sourceId eq '${escapeOData(sourceId)}'`;
 
@@ -316,6 +331,7 @@ export async function listIndexedSources(
   tenantId: string,
   sessionId: string,
 ): Promise<Map<string, string>> {
+  if (onAws()) return s3v.listIndexedSources(indexName, tenantId, sessionId);
   const byManifestId = new Map<string, string>();
   for (let skip = 0; ; skip += 1000) {
     const results = await client(indexName).search('*', {
@@ -346,6 +362,7 @@ export async function countSessionChunks(
   tenantId: string,
   sessionId: string,
 ): Promise<number> {
+  if (onAws()) return s3v.countSessionChunks(indexName, tenantId, sessionId);
   const results = await client(indexName).search('*', {
     filter: scopeFilter(tenantId, sessionId),
     top: 0,
@@ -360,6 +377,7 @@ export async function listSessionSources(
   tenantId: string,
   sessionId: string,
 ): Promise<KnowledgeSource[]> {
+  if (onAws()) return s3v.listSessionSources(indexName, tenantId, sessionId);
   const results = await client(indexName).search('*', {
     filter: scopeFilter(tenantId, sessionId),
     top: 1000,
@@ -414,6 +432,7 @@ export function deleteSession(
   tenantId: string,
   sessionId: string,
 ): Promise<number> {
+  if (onAws()) return s3v.deleteSession(indexName, tenantId, sessionId);
   return deleteByFilter(indexName, scopeFilter(tenantId, sessionId));
 }
 
@@ -423,6 +442,7 @@ export function purgeExpired(
   tenantId: string,
   maxAgeHours: number,
 ): Promise<number> {
+  if (onAws()) return s3v.purgeExpired(indexName, tenantId, maxAgeHours);
   const cutoff = new Date(Date.now() - maxAgeHours * 3_600_000).toISOString();
   return deleteByFilter(
     indexName,

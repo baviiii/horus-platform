@@ -1,0 +1,20 @@
+project     = "horus"
+environment = "dev"
+region      = "ap-southeast-2"
+owner       = "your-name"
+
+# Budget alerts go here. Required.
+alert_email = "you@example.com"
+
+# Gross burn before credits (alerts at 50/80/100% + forecast) and real money
+# after credits (alerts at $1).
+monthly_usage_budget_usd = 50
+out_of_pocket_budget_usd = 5
+
+# Titan V2 width: 256 | 512 | 1024. Must match HORUS_VECTOR_DIMENSIONS.
+vector_dimensions = 1024
+
+# Browser origins for direct presigned uploads; leave empty for server-side only.
+app_origins = []
+
+create_app_access_key = true

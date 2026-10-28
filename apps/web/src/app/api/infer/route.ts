@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { validateApiKey, hasAllScopes, SCOPES } from '@horus/auth';
 import { infer } from '@horus/core/inference';
+import { aiOffResponse, aiErrorStatus } from '@/lib/ai-status';
 
 // bcryptjs (used by validateApiKey) needs Node, not the edge runtime.
 export const runtime = 'nodejs';
@@ -39,6 +40,9 @@ function readKey(req: Request): string | null {
 }
 
 export async function POST(req: Request) {
+  const aiOff = aiOffResponse();
+  if (aiOff) return aiOff;
+
   // 1. Authenticate — the caller proves identity with a Horus API key.
   const token = readKey(req);
   if (!token) {
@@ -89,6 +93,6 @@ export async function POST(req: Request) {
     return NextResponse.json(result);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Inference failed';
-    return NextResponse.json({ error: message }, { status: 502 });
+    return NextResponse.json({ error: message }, { status: aiErrorStatus(err) });
   }
 }

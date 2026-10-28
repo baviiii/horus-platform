@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { CitationRegistry, executeFetchPage, executeSearchKnowledge } from '@horus/core/agent';
 import { PLAYGROUND } from '../../_lib/config';
 import { checkRateLimit, clientIp, rateLimitResponse } from '../../_lib/rate-limit';
+import { aiOffResponse } from '@/lib/ai-status';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -19,6 +20,9 @@ const BodySchema = z.object({
  * executors that back the chat agent run with server-side credentials.
  */
 export async function POST(req: Request) {
+  const aiOff = aiOffResponse();
+  if (aiOff) return aiOff;
+
   const rate = checkRateLimit('voice-tool', clientIp(req), PLAYGROUND.rate.chatPerHour);
   if (!rate.ok) return rateLimitResponse(rate);
 

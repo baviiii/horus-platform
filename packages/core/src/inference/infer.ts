@@ -7,10 +7,14 @@
  * owns the schema (it lives in their prompt) and parses the result.
  *
  * `model: "fast" | "deep"` is a capability tier, not a vendor model id — we map
- * it to a concrete Azure deployment here so callers stay vendor-agnostic.
+ * it to a concrete Azure deployment or Bedrock Claude model here so callers
+ * stay vendor-agnostic.
  */
+import type Anthropic from '@anthropic-ai/sdk';
 import type OpenAI from 'openai';
 import { getOpenAIClient, MODELS } from '../clients/openai.js';
+import { aiProvider, assertAiAvailable } from '../provider.js';
+import { claudeJson } from './claude-json.js';
 
 export type ModelTier = 'fast' | 'deep';
 
@@ -53,7 +57,34 @@ export function resolveDeployment(tier: ModelTier): string {
 
 const mentionsJson = (s: string): boolean => /json/i.test(s);
 
+/**
+ * Claude takes system text separately and must open on a user turn, so
+ * system-role messages fold into the system prompt and a leading assistant
+ * turn gets a neutral user turn in front of it.
+ */
+async function inferOnClaude(params: InferParams): Promise<InferResult> {
+  const systemExtras = params.messages.filter((m) => m.role === 'system').map((m) => m.content);
+  const messages: Anthropic.Beta.BetaMessageParam[] = params.messages
+    .filter((m) => m.role !== 'system')
+    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+  if (messages[0]?.role !== 'user') {
+    messages.unshift({ role: 'user', content: 'Begin.' });
+  }
+
+  const result = await claudeJson({
+    tier: params.model ?? 'fast',
+    system: [params.system, ...systemExtras].join('\n\n'),
+    messages,
+    ...(params.schema && { schema: params.schema }),
+    ...(params.maxTokens && { maxTokens: params.maxTokens }),
+  });
+  return { ...result, cached: false };
+}
+
 export async function infer(params: InferParams): Promise<InferResult> {
+  assertAiAvailable();
+  if (aiProvider() === 'aws') return inferOnClaude(params);
+
   const client = getOpenAIClient();
   const deployment = resolveDeployment(params.model ?? 'fast');
 

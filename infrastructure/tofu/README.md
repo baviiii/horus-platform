@@ -7,6 +7,8 @@ Greenfield infra build for the multi-tenant Horus platform. Replaces the archive
 ```
 tofu/
   envs/
+    aws-dev/      # AWS: S3, S3 Vectors, Bedrock Guardrail, app IAM user, budgets
+                  #   (see docs/AWS-MIGRATION.md; selected by HORUS_AI_PROVIDER=aws)
     dev/          # dev environment — root module you run `tofu apply` from
   modules/
     storage/      # blob storage account + containers

@@ -6,6 +6,7 @@ import { moderateText } from '@horus/core/safety';
 import type { McpServerRef } from '@horus/core/mcp';
 import { getCurrentUser } from '@/lib/supabase/server';
 import { sseResponse } from '../../playground/_lib/sse';
+import { aiOffResponse } from '@/lib/ai-status';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -67,6 +68,9 @@ const PostSchema = z.object({
 });
 
 export async function POST(req: Request) {
+  const aiOff = aiOffResponse();
+  if (aiOff) return aiOff;
+
   let raw: unknown;
   try {
     raw = await req.json();

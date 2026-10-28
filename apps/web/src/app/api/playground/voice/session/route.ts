@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { buildVoiceSessionConfig } from '@horus/core/agent';
 import { PLAYGROUND } from '../../_lib/config';
 import { checkRateLimit, clientIp, rateLimitResponse } from '../../_lib/rate-limit';
+import { voiceUnavailableResponse } from '@/lib/ai-status';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -17,6 +18,9 @@ const BodySchema = z.object({
  * receives the short-lived key and the WebRTC endpoint.
  */
 export async function POST(req: Request) {
+  const voiceOff = voiceUnavailableResponse();
+  if (voiceOff) return voiceOff;
+
   const rate = checkRateLimit('voice', clientIp(req), PLAYGROUND.rate.voicePerHour);
   if (!rate.ok) return rateLimitResponse(rate);
 

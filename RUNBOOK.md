@@ -2,6 +2,11 @@
 
 One page: what runs, how to start it, where to look when confused.
 
+> **2026-10-18:** the Azure resources below were deleted when the startup
+> credit ran out. Horus now runs on Azure or AWS behind `HORUS_AI_PROVIDER`
+> — see [docs/AWS-MIGRATION.md](docs/AWS-MIGRATION.md) for the switch and the
+> day-one AWS steps.
+
 ## The pieces
 
 ```

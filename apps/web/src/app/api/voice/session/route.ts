@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { validateApiKey, hasAllScopes, SCOPES } from '@horus/auth';
 import { buildListenSessionConfig } from '@horus/core/agent';
 import { checkRateLimit } from '../../playground/_lib/rate-limit';
+import { voiceUnavailableResponse } from '@/lib/ai-status';
 
 // bcryptjs (used by validateApiKey) needs Node, not the edge runtime.
 export const runtime = 'nodejs';
@@ -39,6 +40,9 @@ function readKey(req: Request): string | null {
 }
 
 export async function POST(req: Request) {
+  const voiceOff = voiceUnavailableResponse();
+  if (voiceOff) return voiceOff;
+
   const token = readKey(req);
   if (!token) return NextResponse.json({ error: 'Missing API key' }, { status: 401 });
   const auth = await validateApiKey(token);

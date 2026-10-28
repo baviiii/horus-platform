@@ -2,6 +2,7 @@ import { prisma } from '@horus/db';
 import { ingestPdf } from '@horus/core/knowledge';
 import { requireMemberApi, forbidViewerApi } from '@/lib/tenant-api';
 import { storeTenantBlob } from '@/lib/evidence-blob';
+import { aiOffResponse } from '@/lib/ai-status';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,9 @@ function indexName(): string {
  * workspace agent (and incident drafting evidence) can cite the document.
  */
 export async function POST(req: Request) {
+  const aiOff = aiOffResponse();
+  if (aiOff) return aiOff;
+
   let form: FormData;
   try {
     form = await req.formData();

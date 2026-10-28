@@ -10,6 +10,7 @@ import { router, scopedProcedure } from '../trpc.js';
 import { Prisma } from '@horus/db';
 import { UploadMetadataSchema } from '@horus/core/documents';
 import { clients } from '@horus/core';
+import { aiProvider } from '@horus/core/provider';
 
 function parseStorageConnection(): { account: string; key: string } {
   const conn = process.env.AZURE_STORAGE_CONNECTION_STRING;
@@ -64,8 +65,8 @@ export const documentsRouter = router({
     }),
 
   /**
-   * Direct-to-blob upload: returns a 15-minute SAS URL the client PUTs the
-   * file to, plus a PENDING document row. The client then calls
+   * Direct-to-blob upload: returns a 15-minute SAS URL (Azure) or presigned
+   * S3 PUT (HORUS_AI_PROVIDER=aws) the client PUTs the file to, plus a PENDING document row. The client then calls
    * `documents.commitUpload` (or the ingestion worker picks the blob up) to
    * run chunk → embed → index.
    *
@@ -86,7 +87,15 @@ export const documentsRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      const { account, key } = parseStorageConnection();
+      const onAws = aiProvider() === 'aws';
+      if (onAws && !clients.isS3StorageConfigured()) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message:
+            'S3 document storage is not configured (HORUS_S3_DOCUMENTS_BUCKET missing). Use the UI upload route which streams through the server, or configure storage.',
+        });
+      }
+      const azure = onAws ? null : parseStorageConnection();
 
       const doc = await ctx.db.document.create({
         data: {
@@ -106,8 +115,26 @@ export const documentsRouter = router({
 
       const safeName = input.filename.replace(/[^\w.-]+/g, '_').slice(0, 80);
       const blobName = `documents/${randomUUID()}-${safeName}`;
-      const credential = new StorageSharedKeyCredential(account, key);
       const expires = new Date(Date.now() + 15 * 60 * 1000);
+
+      if (!azure) {
+        const upload = await clients.presignTenantUpload({
+          tenantId: ctx.tenant.id,
+          path: blobName,
+          contentType: input.mimeType,
+          expiresInSeconds: 15 * 60,
+        });
+        return {
+          documentId: doc.id,
+          blobName,
+          uploadUrl: upload.url,
+          expiresAt: expires.toISOString(),
+          headers: upload.headers,
+        };
+      }
+
+      const { account, key } = azure;
+      const credential = new StorageSharedKeyCredential(account, key);
 
       const containerName = clients.tenantContainerName(ctx.tenant.id);
       const sas = generateBlobSASQueryParameters(

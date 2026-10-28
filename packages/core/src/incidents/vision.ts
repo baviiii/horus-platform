@@ -5,8 +5,12 @@
  * packaging) is often the highest-signal evidence they have. We turn it into
  * objective text so it can be cited like any other evidence. The prompt is
  * deliberately conservative: describe, never diagnose, never identify.
+ *
+ * Runs on gpt-4o (Azure) or Claude (AWS); both return the same JSON shape.
  */
 import { getOpenAIClient, MODELS } from '../clients/openai.js';
+import { claudeJson } from '../inference/claude-json.js';
+import { aiProvider, assertAiAvailable } from '../provider.js';
 
 export interface PhotoAnalysis {
   description: string;
@@ -33,7 +37,43 @@ export interface AnalyzePhotoParams {
   hint?: string;
 }
 
-export async function analyzeIncidentPhoto(params: AnalyzePhotoParams): Promise<PhotoAnalysis> {
+const CLAUDE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
+type ClaudeImageType = (typeof CLAUDE_IMAGE_TYPES)[number];
+
+async function photoJsonOnClaude(
+  params: AnalyzePhotoParams,
+): Promise<{ content: string; model: string }> {
+  const mediaType = params.mimeType.toLowerCase();
+  if (!(CLAUDE_IMAGE_TYPES as readonly string[]).includes(mediaType)) {
+    throw new Error(`Unsupported photo type ${params.mimeType}; use JPEG, PNG, GIF or WebP.`);
+  }
+  const result = await claudeJson({
+    tier: 'fast',
+    system: SYSTEM,
+    maxTokens: 2000,
+    messages: [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: mediaType as ClaudeImageType,
+              data: Buffer.from(params.data).toString('base64'),
+            },
+          },
+          { type: 'text', text: params.hint?.trim() || 'Analyze this incident evidence photo.' },
+        ],
+      },
+    ],
+  });
+  return { content: result.content, model: result.model };
+}
+
+async function photoJsonOnAzure(
+  params: AnalyzePhotoParams,
+): Promise<{ content: string; model: string }> {
   const client = getOpenAIClient();
   const dataUrl = `data:${params.mimeType};base64,${Buffer.from(params.data).toString('base64')}`;
 
@@ -54,7 +94,16 @@ export async function analyzeIncidentPhoto(params: AnalyzePhotoParams): Promise<
     max_tokens: 800,
   });
 
-  const content = completion.choices[0]?.message?.content ?? '';
+  return {
+    content: completion.choices[0]?.message?.content ?? '',
+    model: completion.model ?? MODELS.completion,
+  };
+}
+
+export async function analyzeIncidentPhoto(params: AnalyzePhotoParams): Promise<PhotoAnalysis> {
+  assertAiAvailable();
+  const { content, model } =
+    aiProvider() === 'aws' ? await photoJsonOnClaude(params) : await photoJsonOnAzure(params);
   if (!content) throw new Error('Photo analysis returned an empty response');
 
   let raw: { description?: unknown; extracted_text?: unknown; hazards?: unknown };
@@ -77,7 +126,7 @@ export async function analyzeIncidentPhoto(params: AnalyzePhotoParams): Promise<
     hazards: Array.isArray(raw.hazards)
       ? raw.hazards.filter((h): h is string => typeof h === 'string').slice(0, 5)
       : [],
-    model: completion.model ?? MODELS.completion,
+    model,
   };
 }
 

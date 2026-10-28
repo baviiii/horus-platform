@@ -6,7 +6,13 @@
  * Screens user-supplied text (chat input, crawled pages, PDF text) before
  * it reaches models or the shared index. Fails open on service errors:
  * a moderation outage must not take the product down with it.
+ *
+ * With HORUS_AI_PROVIDER=aws the same verdicts come from Bedrock Guardrails
+ * (`guardrails.ts`). With it `off`, nothing is screened — nothing reaches a
+ * model either, so there is nothing to protect.
  */
+import { aiProvider } from '../provider.js';
+import { moderateImageWithGuardrail, moderateTextWithGuardrail } from './guardrails.js';
 
 const API_VERSION = '2024-09-01';
 const MAX_ANALYZE_CHARS = 10_000; // service limit per text:analyze call
@@ -35,6 +41,10 @@ function config(): { url: string; key: string } | null {
 
 /** Analyze one text block; returns a verdict, never throws. */
 export async function moderateText(text: string): Promise<ModerationVerdict> {
+  const provider = aiProvider();
+  if (provider === 'aws') return moderateTextWithGuardrail(text);
+  if (provider === 'off') return { blocked: false };
+
   const cfg = config();
   if (!cfg || text.trim().length === 0) return { blocked: false };
 
@@ -101,6 +111,10 @@ function imageConfig(): { url: string; key: string } | null {
  * block at medium+ severity, fail open on service errors.
  */
 export async function moderateImage(data: Uint8Array): Promise<ModerationVerdict> {
+  const provider = aiProvider();
+  if (provider === 'aws') return moderateImageWithGuardrail(data);
+  if (provider === 'off') return { blocked: false };
+
   const cfg = imageConfig();
   if (!cfg || data.byteLength === 0) return { blocked: false };
 

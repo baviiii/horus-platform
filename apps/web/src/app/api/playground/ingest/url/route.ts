@@ -9,6 +9,7 @@ import {
 import { PLAYGROUND } from '../../_lib/config';
 import { checkRateLimit, clientIp, rateLimitResponse } from '../../_lib/rate-limit';
 import { sseResponse } from '../../_lib/sse';
+import { aiOffResponse } from '@/lib/ai-status';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,6 +32,9 @@ function sweepExpired(): void {
 }
 
 export async function POST(req: Request) {
+  const aiOff = aiOffResponse();
+  if (aiOff) return aiOff;
+
   const rate = checkRateLimit('ingest', clientIp(req), PLAYGROUND.rate.ingestPerHour);
   if (!rate.ok) return rateLimitResponse(rate);
 

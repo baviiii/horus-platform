@@ -6,6 +6,7 @@ import { ensureKnowledgeIndex } from '@horus/core/knowledge';
 import { moderateText } from '@horus/core/safety';
 import type { McpServerRef } from '@horus/core/mcp';
 import { sseResponse } from '../../playground/_lib/sse';
+import { aiOffResponse } from '@/lib/ai-status';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -69,6 +70,9 @@ async function tenantMcpServers(tenantId: string): Promise<McpServerRef[]> {
 }
 
 export async function POST(req: Request) {
+  const aiOff = aiOffResponse();
+  if (aiOff) return aiOff;
+
   const auth = req.headers.get('authorization');
   if (!auth) {
     return Response.json({ error: 'Missing Authorization header' }, { status: 401 });
