@@ -7,14 +7,14 @@
  * owns the schema (it lives in their prompt) and parses the result.
  *
  * `model: "fast" | "deep"` is a capability tier, not a vendor model id — we map
- * it to a concrete Azure deployment or Bedrock Claude model here so callers
- * stay vendor-agnostic.
+ * it to a concrete Azure deployment or Bedrock model here so callers stay
+ * vendor-agnostic.
  */
-import type Anthropic from '@anthropic-ai/sdk';
+import type { ModelMessage } from 'ai';
 import type OpenAI from 'openai';
 import { getOpenAIClient, MODELS } from '../clients/openai.js';
 import { aiProvider, assertAiAvailable } from '../provider.js';
-import { claudeJson } from './claude-json.js';
+import { bedrockJson } from './bedrock-json.js';
 
 export type ModelTier = 'fast' | 'deep';
 
@@ -58,20 +58,20 @@ export function resolveDeployment(tier: ModelTier): string {
 const mentionsJson = (s: string): boolean => /json/i.test(s);
 
 /**
- * Claude takes system text separately and must open on a user turn, so
- * system-role messages fold into the system prompt and a leading assistant
- * turn gets a neutral user turn in front of it.
+ * System-role messages fold into the system prompt, and a leading assistant
+ * turn gets a neutral user turn in front of it: Bedrock conversations must
+ * open on a user turn.
  */
-async function inferOnClaude(params: InferParams): Promise<InferResult> {
+async function inferOnBedrock(params: InferParams): Promise<InferResult> {
   const systemExtras = params.messages.filter((m) => m.role === 'system').map((m) => m.content);
-  const messages: Anthropic.Beta.BetaMessageParam[] = params.messages
+  const messages: ModelMessage[] = params.messages
     .filter((m) => m.role !== 'system')
     .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
   if (messages[0]?.role !== 'user') {
     messages.unshift({ role: 'user', content: 'Begin.' });
   }
 
-  const result = await claudeJson({
+  const result = await bedrockJson({
     tier: params.model ?? 'fast',
     system: [params.system, ...systemExtras].join('\n\n'),
     messages,
@@ -83,7 +83,7 @@ async function inferOnClaude(params: InferParams): Promise<InferResult> {
 
 export async function infer(params: InferParams): Promise<InferResult> {
   assertAiAvailable();
-  if (aiProvider() === 'aws') return inferOnClaude(params);
+  if (aiProvider() === 'aws') return inferOnBedrock(params);
 
   const client = getOpenAIClient();
   const deployment = resolveDeployment(params.model ?? 'fast');

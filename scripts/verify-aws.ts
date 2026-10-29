@@ -56,7 +56,7 @@ async function main(): Promise<void> {
       `documents ${AWS_RESOURCES.documentsBucket() ?? '(unset)'}, guardrail ${AWS_RESOURCES.guardrailId() ?? '(unset)'}\n`,
   );
 
-  await check('infer (Claude, JSON)', async () => {
+  await check('infer (JSON)', async () => {
     const res = await infer({
       task: 'verify.aws',
       system: 'You answer arithmetic. Return ONLY JSON: {"answer": number}.',
@@ -125,7 +125,7 @@ async function main(): Promise<void> {
     return `top score ${hits[0].score.toFixed(3)}, ${count} chunks`;
   });
 
-  await check('agent (Claude tool loop over the knowledge store)', async () => {
+  await check('agent (tool loop over the knowledge store)', async () => {
     let text = '';
     const tools: string[] = [];
     await runKnowledgeAgent({

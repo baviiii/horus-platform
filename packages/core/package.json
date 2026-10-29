@@ -28,8 +28,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/bedrock-sdk": "^0.35.0",
-    "@anthropic-ai/sdk": "^0.135.0",
+    "@ai-sdk/amazon-bedrock": "^5.0.127",
     "@aws-sdk/client-bedrock-runtime": "^3.1152.0",
     "@aws-sdk/client-comprehend": "^3.1152.0",
     "@aws-sdk/client-s3": "^3.1152.0",
@@ -41,6 +40,7 @@
     "@azure/storage-blob": "^12.26.0",
     "@horus/db": "workspace:*",
     "@modelcontextprotocol/sdk": "^1.12.0",
+    "ai": "^7.0.156",
     "cheerio": "^1.0.0",
     "docx": "^9.0.2",
     "html-to-text": "^9.0.5",

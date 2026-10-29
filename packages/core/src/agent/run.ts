@@ -8,8 +8,8 @@
  * client-held history; run events stream out as the same AgentEvent shape
  * the playground UI already renders.
  *
- * With HORUS_AI_PROVIDER=aws the same call runs on Claude via Bedrock instead
- * (`run-claude.ts`), under the same instructions and tools.
+ * With HORUS_AI_PROVIDER=aws the same call runs on a Bedrock model instead
+ * (`run-bedrock.ts`), under the same instructions and tools.
  */
 import type {
   Agent,
@@ -33,7 +33,7 @@ import {
   personaNote as personaInstructions,
   SYSTEM_PROMPT,
 } from './instructions.js';
-import { runKnowledgeAgentOnClaude } from './run-claude.js';
+import { runKnowledgeAgentOnBedrock } from './run-bedrock.js';
 import {
   buildAgentTools,
   CitationRegistry,
@@ -165,7 +165,7 @@ function bingCallCount(step: RunStep): number {
 
 export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
   assertAiAvailable();
-  if (aiProvider() === 'aws') return runKnowledgeAgentOnClaude(params);
+  if (aiProvider() === 'aws') return runKnowledgeAgentOnBedrock(params);
 
   const { emit, signal } = params;
   const client = getAgentsClient();

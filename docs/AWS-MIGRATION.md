@@ -8,11 +8,11 @@
 
 `HORUS_AI_PROVIDER` decides where every AI call goes:
 
-| Value             | Models                                             | Embeddings    | Knowledge store          | Moderation         | Files |
-| ----------------- | -------------------------------------------------- | ------------- | ------------------------ | ------------------ | ----- |
-| `azure` (default) | Foundry Agent Service + Azure OpenAI               | Azure OpenAI  | Azure AI Search (hybrid) | Content Safety     | Blob  |
-| `aws`             | Claude on Bedrock (Messages API, `bedrock-mantle`) | Titan Text V2 | S3 Vectors (vector-only) | Bedrock Guardrails | S3    |
-| `off`             | —                                                  | —             | —                        | —                  | —     |
+| Value             | Models                                                           | Embeddings    | Knowledge store          | Moderation         | Files |
+| ----------------- | ---------------------------------------------------------------- | ------------- | ------------------------ | ------------------ | ----- |
+| `azure` (default) | Foundry Agent Service + Azure OpenAI                             | Azure OpenAI  | Azure AI Search (hybrid) | Content Safety     | Blob  |
+| `aws`             | Any Bedrock model via the AI SDK (default Claude Sonnet 4.6, AU) | Titan Text V2 | S3 Vectors (vector-only) | Bedrock Guardrails | S3    |
+| `off`             | —                                                                | —             | —                        | —                  | —     |
 
 `off` is the kill switch: every AI route answers **503** with
 `{"code":"AI_UNAVAILABLE"}` before doing any work (tRPC returns
@@ -25,32 +25,45 @@ restores the old behaviour exactly.
 
 ## What maps to what
 
-| Piece           | Azure                                    | AWS                                                       | Code                                     |
-| --------------- | ---------------------------------------- | --------------------------------------------------------- | ---------------------------------------- |
-| Chat agent      | Foundry Agent Service, server-held agent | Manual streaming tool loop on Claude                      | `core/src/agent/run-claude.ts`           |
-| `infer()` JSON  | `response_format: json_object`           | Forced `respond` tool (Bedrock has no structured outputs) | `core/src/inference/claude-json.ts`      |
-| `/api/embed`    | text-embedding-3-small/large             | Titan V2 (256/512/1024 dims)                              | `core/src/clients/bedrock-embeddings.ts` |
-| Knowledge store | AI Search index                          | S3 Vectors index, same function signatures                | `core/src/knowledge/store-s3vectors.ts`  |
-| Moderation      | Content Safety, block at severity ≥ 4    | ApplyGuardrail, MEDIUM strength                           | `core/src/safety/guardrails.ts`          |
-| Incident PII    | Azure Language                           | Comprehend DetectPiiEntities                              | `core/src/clients/language.ts`           |
-| Incident photos | gpt-4o vision                            | Claude vision                                             | `core/src/incidents/vision.ts`           |
-| Files           | Blob container per tenant                | S3 prefix `t-<tenantId>/`                                 | `core/src/clients/s3-storage.ts`         |
-| Voice           | Realtime API over WebRTC                 | **not yet** — routes answer 503                           | see below                                |
-| Infra           | `infrastructure/tofu/envs/dev`           | `infrastructure/tofu/envs/aws-dev`                        |                                          |
+| Piece           | Azure                                    | AWS                                                  | Code                                     |
+| --------------- | ---------------------------------------- | ---------------------------------------------------- | ---------------------------------------- |
+| Chat agent      | Foundry Agent Service, server-held agent | AI SDK tool loop (`streamText`) on any Bedrock model | `core/src/agent/run-bedrock.ts`          |
+| `infer()` JSON  | `response_format: json_object`           | AI SDK structured output (`Output.object` / `.json`) | `core/src/inference/bedrock-json.ts`     |
+| `/api/embed`    | text-embedding-3-small/large             | Titan V2 (256/512/1024 dims)                         | `core/src/clients/bedrock-embeddings.ts` |
+| Knowledge store | AI Search index                          | S3 Vectors index, same function signatures           | `core/src/knowledge/store-s3vectors.ts`  |
+| Moderation      | Content Safety, block at severity ≥ 4    | ApplyGuardrail, MEDIUM strength                      | `core/src/safety/guardrails.ts`          |
+| Incident PII    | Azure Language                           | Comprehend DetectPiiEntities                         | `core/src/clients/language.ts`           |
+| Incident photos | gpt-4o vision                            | Bedrock vision model                                 | `core/src/incidents/vision.ts`           |
+| Files           | Blob container per tenant                | S3 prefix `t-<tenantId>/`                            | `core/src/clients/s3-storage.ts`         |
+| Voice           | Realtime API over WebRTC                 | **not yet** — routes answer 503                      | see below                                |
+| Infra           | `infrastructure/tofu/envs/dev`           | `infrastructure/tofu/envs/aws-dev`                   |                                          |
 
 ### Models
 
-Both tiers default to **Claude Opus 5** (`anthropic.claude-opus-5`). The
-refusal fallback (SDK middleware, since Bedrock has no server-side
-`fallbacks`) retries a declined request on `anthropic.claude-opus-4-8`.
-Override per environment:
+Model calls go through the Vercel AI SDK's Bedrock provider (`ai` +
+`@ai-sdk/amazon-bedrock`, Bedrock's Converse API), so any Bedrock model with
+tool use is a setting, not a code change (`core/src/clients/bedrock-models.ts`).
+Both tiers default to **Claude Sonnet 4.6 in Australia**
+(`au.anthropic.claude-sonnet-4-6`). Override per environment:
 
-- `HORUS_CLAUDE_MODEL_FAST` / `HORUS_CLAUDE_MODEL_DEEP` — set FAST to
-  `anthropic.claude-sonnet-5` or `anthropic.claude-haiku-4-5` to stretch
-  credits on the high-volume routes (chat, `/api/infer` default tier).
-- `HORUS_CLAUDE_FALLBACK_MODEL` — `none` disables the fallback.
-- `HORUS_CLAUDE_EFFORT` — `low`…`max` for the chat agent; unset is the model
-  default.
+- `HORUS_MODEL_FAST` / `HORUS_MODEL_DEEP`: the model ID per tier, e.g.
+  `au.anthropic.claude-haiku-4-5-20251001-v1:0` or a non-Claude model such as
+  `moonshotai.kimi-k2.5`. The older `HORUS_CLAUDE_MODEL_*` names still work.
+- `HORUS_MODEL_VISION`: the model for incident photos. Defaults to Sonnet 4.6,
+  because not every text model reads images.
+- Every model used also needs `bedrock:InvokeModel` on its ARN in
+  `infrastructure/tofu/envs/aws-dev/iam.tf`. The app user is scoped to the
+  `au.` Claude profiles today.
+
+Found on the first live run (2026-10-29), Sydney account 293310830654:
+
+- **`bedrock-mantle` (the Messages-API endpoint) answers 404 "model does not
+  exist" for every Claude model on this account.** Use `bedrock-runtime`
+  (InvokeModel / Converse), which the AI SDK does.
+- **Current Claude models in Sydney are only callable through an inference
+  profile.** `au.` routes to Sydney and Melbourne; `global.` routes anywhere.
+- **Claude Sonnet 5 and Opus 5 are "not available for this account"** until
+  AWS support enables them. Sonnet 4.6, Sonnet 4.5 (LEGACY) and Haiku 4.5 work.
 
 ### Behaviour differences to expect
 
@@ -68,14 +81,12 @@ Override per environment:
 
 1. **Lock the account down.** MFA on root, an admin user or Identity Center
    login for yourself, and a **spend limit** in AWS Settings → Billing.
-2. **Open Bedrock in `ap-southeast-2`** and confirm access to Claude Opus 5,
-   Claude Opus 4.8 and Titan Text Embeddings V2. Anthropic models may ask for
-   a one-time use-case form. Run one prompt in the playground for each Claude
-   model so the account is subscribed before the app calls it.
-3. **Check the model IDs and routing.** The defaults assume the IDs in the
-   table above on the global endpoint. For AU-only inference (résumé data),
-   confirm the AU profile ID in the console and set the two
-   `HORUS_CLAUDE_MODEL_*` variables to it.
+2. **Open Bedrock in `ap-southeast-2`.** Submit Anthropic's one-time use-case
+   form (the playground asks for it), then send one message to each model you
+   will use, as admin. That accepts the model's terms, which the app's own key
+   is not allowed to do.
+3. **Check the model IDs and routing.** Use inference profile IDs (`au.…`),
+   not bare model IDs. See **Models** above for what this account can call.
 4. **Apply the infrastructure** — plan first, then apply:
    ```bash
    cd infrastructure/tofu/envs/aws-dev

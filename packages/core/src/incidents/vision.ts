@@ -6,10 +6,11 @@
  * objective text so it can be cited like any other evidence. The prompt is
  * deliberately conservative: describe, never diagnose, never identify.
  *
- * Runs on gpt-4o (Azure) or Claude (AWS); both return the same JSON shape.
+ * Runs on gpt-4o (Azure) or the Bedrock vision model (AWS, HORUS_MODEL_VISION);
+ * both return the same JSON shape.
  */
 import { getOpenAIClient, MODELS } from '../clients/openai.js';
-import { claudeJson } from '../inference/claude-json.js';
+import { bedrockJson } from '../inference/bedrock-json.js';
 import { aiProvider, assertAiAvailable } from '../provider.js';
 
 export interface PhotoAnalysis {
@@ -37,32 +38,25 @@ export interface AnalyzePhotoParams {
   hint?: string;
 }
 
-const CLAUDE_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const;
-type ClaudeImageType = (typeof CLAUDE_IMAGE_TYPES)[number];
+/** Image formats Bedrock's Converse API accepts. */
+const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-async function photoJsonOnClaude(
+async function photoJsonOnBedrock(
   params: AnalyzePhotoParams,
 ): Promise<{ content: string; model: string }> {
   const mediaType = params.mimeType.toLowerCase();
-  if (!(CLAUDE_IMAGE_TYPES as readonly string[]).includes(mediaType)) {
+  if (!IMAGE_TYPES.includes(mediaType)) {
     throw new Error(`Unsupported photo type ${params.mimeType}; use JPEG, PNG, GIF or WebP.`);
   }
-  const result = await claudeJson({
-    tier: 'fast',
+  const result = await bedrockJson({
+    tier: 'vision',
     system: SYSTEM,
     maxTokens: 2000,
     messages: [
       {
         role: 'user',
         content: [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: mediaType as ClaudeImageType,
-              data: Buffer.from(params.data).toString('base64'),
-            },
-          },
+          { type: 'file', mediaType, data: { type: 'data', data: params.data } },
           { type: 'text', text: params.hint?.trim() || 'Analyze this incident evidence photo.' },
         ],
       },
@@ -103,7 +97,7 @@ async function photoJsonOnAzure(
 export async function analyzeIncidentPhoto(params: AnalyzePhotoParams): Promise<PhotoAnalysis> {
   assertAiAvailable();
   const { content, model } =
-    aiProvider() === 'aws' ? await photoJsonOnClaude(params) : await photoJsonOnAzure(params);
+    aiProvider() === 'aws' ? await photoJsonOnBedrock(params) : await photoJsonOnAzure(params);
   if (!content) throw new Error('Photo analysis returned an empty response');
 
   let raw: { description?: unknown; extracted_text?: unknown; hazards?: unknown };
