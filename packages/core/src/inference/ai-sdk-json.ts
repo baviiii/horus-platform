@@ -1,15 +1,14 @@
 /**
- * JSON-only generation on Bedrock through the AI SDK.
+ * JSON-only generation through the AI SDK, on any model provider.
  *
  * With a JSON Schema the answer is validated against it (Output.object);
  * without one any JSON object is accepted (Output.json). The AI SDK picks how
- * each model produces it — for Claude on Bedrock that is a forced `json`
- * tool, the same technique the earlier Claude-only code used by hand.
+ * each model produces it (for Claude on Bedrock, a forced `json` tool).
  */
 import { generateText, jsonSchema, Output, type ModelMessage } from 'ai';
-import { languageModel, modelId, type ModelTier } from '../clients/bedrock-models.js';
+import { languageModel, modelId, type ModelTier } from '../clients/models.js';
 
-export interface BedrockJsonParams {
+export interface AiSdkJsonParams {
   tier: ModelTier;
   system: string;
   messages: ModelMessage[];
@@ -19,14 +18,14 @@ export interface BedrockJsonParams {
   signal?: AbortSignal;
 }
 
-export interface BedrockJsonResult {
+export interface AiSdkJsonResult {
   /** The answer as a JSON string. */
   content: string;
   model: string;
   usage: { inputTokens: number; outputTokens: number };
 }
 
-export async function bedrockJson(params: BedrockJsonParams): Promise<BedrockJsonResult> {
+export async function aiSdkJson(params: AiSdkJsonParams): Promise<AiSdkJsonResult> {
   const id = modelId(params.tier);
   const schema = params.schema?.type === 'object' ? params.schema : undefined;
 
@@ -35,7 +34,7 @@ export async function bedrockJson(params: BedrockJsonParams): Promise<BedrockJso
     instructions: params.system,
     messages: params.messages,
     output: schema ? Output.object({ schema: jsonSchema(schema) }) : Output.json(),
-    // 8k fits every model offered in Sydney; callers that need more say so.
+    // 8k fits every model we use; callers that need more say so.
     maxOutputTokens: params.maxTokens ?? 8192,
     ...(params.signal && { abortSignal: params.signal }),
   });

@@ -1,11 +1,11 @@
 /**
- * runKnowledgeAgent on Amazon Bedrock through the AI SDK.
+ * runKnowledgeAgent through the AI SDK, on any model provider.
  *
  * The AI SDK runs the tool loop: each step streams the model's text to the
  * caller, runs any requested tools here (knowledge search, page fetch, graph
  * lookup, tenant MCP tools) and feeds the results back. Works with any
- * Bedrock model that supports tool use; the model is a setting
- * (clients/bedrock-models.ts). Emits the same AgentEvent stream as the
+ * model that supports tool use; the model is a setting (clients/models.ts).
+ * Emits the same AgentEvent stream as the
  * Foundry runtime, so the routes and UI don't know which cloud answered.
  *
  * History is client-held, as on Azure: nothing persists between turns.
@@ -19,7 +19,7 @@ import {
   type SystemModelMessage,
   type ToolSet,
 } from 'ai';
-import { languageModel, modelId, supportsCachePoint } from '../clients/bedrock-models.js';
+import { languageModel, modelId, supportsCachePoint } from '../clients/models.js';
 import { callMcpTool, listMcpTools, type McpServerRef } from '../mcp/client.js';
 import {
   describeSources,
@@ -84,7 +84,7 @@ function knowledgeTools(scope: ToolScope, registry: CitationRegistry, run: Run):
   return tools;
 }
 
-/** MCP tools become `mcp__<label>__<tool>`, under Bedrock's 64-character limit. */
+/** MCP tools become `mcp__<label>__<tool>`, under the common 64-character limit. */
 async function buildMcpTools(servers: McpServerRef[], run: Run): Promise<McpTools> {
   const toolset: McpTools = { tools: {}, labels: [] };
   for (const ref of servers) {
@@ -123,7 +123,7 @@ function toHistory(messages: AgentChatMessage[]): ModelMessage[] {
   return history;
 }
 
-export async function runKnowledgeAgentOnBedrock(params: RunAgentParams): Promise<void> {
+export async function runKnowledgeAgentWithAiSdk(params: RunAgentParams): Promise<void> {
   const { emit, signal } = params;
   const tier = params.model ?? 'fast';
   const id = modelId(tier);
@@ -168,7 +168,7 @@ export async function runKnowledgeAgentOnBedrock(params: RunAgentParams): Promis
     {
       role: 'system',
       content: SYSTEM_PROMPT,
-      ...(supportsCachePoint(id) && {
+      ...(supportsCachePoint(tier) && {
         providerOptions: { bedrock: { cachePoint: { type: 'default' } } },
       }),
     },

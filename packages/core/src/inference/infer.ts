@@ -7,14 +7,14 @@
  * owns the schema (it lives in their prompt) and parses the result.
  *
  * `model: "fast" | "deep"` is a capability tier, not a vendor model id — we map
- * it to a concrete Azure deployment or Bedrock model here so callers stay
+ * it to a concrete Azure deployment or configured model here so callers stay
  * vendor-agnostic.
  */
 import type { ModelMessage } from 'ai';
 import type OpenAI from 'openai';
 import { getOpenAIClient, MODELS } from '../clients/openai.js';
 import { aiProvider, assertAiAvailable } from '../provider.js';
-import { bedrockJson } from './bedrock-json.js';
+import { aiSdkJson } from './ai-sdk-json.js';
 
 export type ModelTier = 'fast' | 'deep';
 
@@ -62,7 +62,7 @@ const mentionsJson = (s: string): boolean => /json/i.test(s);
  * turn gets a neutral user turn in front of it: Bedrock conversations must
  * open on a user turn.
  */
-async function inferOnBedrock(params: InferParams): Promise<InferResult> {
+async function inferWithAiSdk(params: InferParams): Promise<InferResult> {
   const systemExtras = params.messages.filter((m) => m.role === 'system').map((m) => m.content);
   const messages: ModelMessage[] = params.messages
     .filter((m) => m.role !== 'system')
@@ -71,7 +71,7 @@ async function inferOnBedrock(params: InferParams): Promise<InferResult> {
     messages.unshift({ role: 'user', content: 'Begin.' });
   }
 
-  const result = await bedrockJson({
+  const result = await aiSdkJson({
     tier: params.model ?? 'fast',
     system: [params.system, ...systemExtras].join('\n\n'),
     messages,
@@ -83,7 +83,7 @@ async function inferOnBedrock(params: InferParams): Promise<InferResult> {
 
 export async function infer(params: InferParams): Promise<InferResult> {
   assertAiAvailable();
-  if (aiProvider() === 'aws') return inferOnBedrock(params);
+  if (aiProvider() === 'aws') return inferWithAiSdk(params);
 
   const client = getOpenAIClient();
   const deployment = resolveDeployment(params.model ?? 'fast');

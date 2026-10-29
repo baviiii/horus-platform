@@ -1,6 +1,6 @@
 /**
  * Instructions and limits shared by both agent runtimes — the Foundry Agent
- * Service loop (`run.ts`) and the Bedrock loop (`run-bedrock.ts`) —
+ * Service loop (`run.ts`) and the AI SDK loop (`run-ai-sdk.ts`) —
  * so the two clouds answer under the same rules.
  */
 import { listSessionSources } from '../knowledge/store.js';

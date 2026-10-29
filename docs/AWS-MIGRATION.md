@@ -27,8 +27,8 @@ restores the old behaviour exactly.
 
 | Piece           | Azure                                    | AWS                                                  | Code                                     |
 | --------------- | ---------------------------------------- | ---------------------------------------------------- | ---------------------------------------- |
-| Chat agent      | Foundry Agent Service, server-held agent | AI SDK tool loop (`streamText`) on any Bedrock model | `core/src/agent/run-bedrock.ts`          |
-| `infer()` JSON  | `response_format: json_object`           | AI SDK structured output (`Output.object` / `.json`) | `core/src/inference/bedrock-json.ts`     |
+| Chat agent      | Foundry Agent Service, server-held agent | AI SDK tool loop (`streamText`) on any model         | `core/src/agent/run-ai-sdk.ts`           |
+| `infer()` JSON  | `response_format: json_object`           | AI SDK structured output (`Output.object` / `.json`) | `core/src/inference/ai-sdk-json.ts`      |
 | `/api/embed`    | text-embedding-3-small/large             | Titan V2 (256/512/1024 dims)                         | `core/src/clients/bedrock-embeddings.ts` |
 | Knowledge store | AI Search index                          | S3 Vectors index, same function signatures           | `core/src/knowledge/store-s3vectors.ts`  |
 | Moderation      | Content Safety, block at severity ≥ 4    | ApplyGuardrail, MEDIUM strength                      | `core/src/safety/guardrails.ts`          |
@@ -40,20 +40,35 @@ restores the old behaviour exactly.
 
 ### Models
 
-Model calls go through the Vercel AI SDK's Bedrock provider (`ai` +
-`@ai-sdk/amazon-bedrock`, Bedrock's Converse API), so any Bedrock model with
-tool use is a setting, not a code change (`core/src/clients/bedrock-models.ts`).
-Both tiers default to **Claude Sonnet 4.6 in Australia**
-(`au.anthropic.claude-sonnet-4-6`). Override per environment:
+Model calls go through the Vercel AI SDK (`ai` plus one adapter per company),
+so switching model, or company, is a setting, not a code change
+(`core/src/clients/models.ts`). A setting is `provider:modelId`:
 
-- `HORUS_MODEL_FAST` / `HORUS_MODEL_DEEP`: the model ID per tier, e.g.
-  `au.anthropic.claude-haiku-4-5-20251001-v1:0` or a non-Claude model such as
-  `moonshotai.kimi-k2.5`. The older `HORUS_CLAUDE_MODEL_*` names still work.
+| Setting example                          | Provider       | Credentials                    |
+| ---------------------------------------- | -------------- | ------------------------------ |
+| `bedrock:au.anthropic.claude-sonnet-4-6` | Amazon Bedrock | `HORUS_AWS_*` keys             |
+| `openai:gpt-5`                           | OpenAI         | `OPENAI_API_KEY`               |
+| `anthropic:claude-sonnet-4-6`            | Anthropic      | `ANTHROPIC_API_KEY`            |
+| `google:gemini-2.5-pro`                  | Google         | `GOOGLE_GENERATIVE_AI_API_KEY` |
+
+A setting without one of those prefixes is a Bedrock model ID, so plain IDs
+(`minimax.minimax-m2.5`) work. Only the model calls move: search, files,
+moderation and PII detection stay on the cloud `HORUS_AI_PROVIDER` names.
+
+- `HORUS_MODEL_FAST` / `HORUS_MODEL_DEEP`: the model per tier. Default
+  `bedrock:au.anthropic.claude-sonnet-4-6`. The older `HORUS_CLAUDE_MODEL_*`
+  names still work.
 - `HORUS_MODEL_VISION`: the model for incident photos. Defaults to Sonnet 4.6,
   because not every text model reads images.
-- Every model used also needs `bedrock:InvokeModel` on its ARN in
-  `infrastructure/tofu/envs/aws-dev/iam.tf`. The app user is scoped to the
-  `au.` Claude profiles today.
+- Every Bedrock model used also needs `bedrock:InvokeModel` on its ARN in
+  `infrastructure/tofu/envs/aws-dev/iam.tf`.
+- `scripts/compare-models.ts` scores models on 21 CareerCraft questions through
+  the real agent. First run (2026-10-30), correct of the 15 questions retrieval
+  could answer: Sonnet 4.6, Haiku 4.5, MiniMax M2.5 and DeepSeek V3.2 14, Kimi
+  K2.5 and gpt-oss-120b 13, Mistral Large 3 12. DeepSeek leaked tool-call markup
+  into every answer, gpt-oss returned empty answers and its own citation style,
+  and Mistral gave confident wrong figures. Cost per question: Sonnet $0.065,
+  Haiku $0.021, Kimi $0.012, MiniMax $0.0076.
 
 Found on the first live run (2026-10-29), Sydney account 293310830654:
 

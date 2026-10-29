@@ -6,11 +6,11 @@
  * objective text so it can be cited like any other evidence. The prompt is
  * deliberately conservative: describe, never diagnose, never identify.
  *
- * Runs on gpt-4o (Azure) or the Bedrock vision model (AWS, HORUS_MODEL_VISION);
+ * Runs on gpt-4o (Azure) or the configured vision model (AWS, HORUS_MODEL_VISION);
  * both return the same JSON shape.
  */
 import { getOpenAIClient, MODELS } from '../clients/openai.js';
-import { bedrockJson } from '../inference/bedrock-json.js';
+import { aiSdkJson } from '../inference/ai-sdk-json.js';
 import { aiProvider, assertAiAvailable } from '../provider.js';
 
 export interface PhotoAnalysis {
@@ -38,17 +38,17 @@ export interface AnalyzePhotoParams {
   hint?: string;
 }
 
-/** Image formats Bedrock's Converse API accepts. */
+/** Image formats every supported provider accepts. */
 const IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
 
-async function photoJsonOnBedrock(
+async function photoJsonWithAiSdk(
   params: AnalyzePhotoParams,
 ): Promise<{ content: string; model: string }> {
   const mediaType = params.mimeType.toLowerCase();
   if (!IMAGE_TYPES.includes(mediaType)) {
     throw new Error(`Unsupported photo type ${params.mimeType}; use JPEG, PNG, GIF or WebP.`);
   }
-  const result = await bedrockJson({
+  const result = await aiSdkJson({
     tier: 'vision',
     system: SYSTEM,
     maxTokens: 2000,
@@ -97,7 +97,7 @@ async function photoJsonOnAzure(
 export async function analyzeIncidentPhoto(params: AnalyzePhotoParams): Promise<PhotoAnalysis> {
   assertAiAvailable();
   const { content, model } =
-    aiProvider() === 'aws' ? await photoJsonOnBedrock(params) : await photoJsonOnAzure(params);
+    aiProvider() === 'aws' ? await photoJsonWithAiSdk(params) : await photoJsonOnAzure(params);
   if (!content) throw new Error('Photo analysis returned an empty response');
 
   let raw: { description?: unknown; extracted_text?: unknown; hazards?: unknown };
