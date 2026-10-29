@@ -17,6 +17,9 @@ locals {
   # are only ever returned, never filtered on. Must match NON_FILTERABLE_KEYS
   # in packages/core/src/knowledge/store-s3vectors.ts.
   non_filterable_keys = ["content", "title", "sourceUrl"]
+
+  # Where Bedrock's au. inference profiles run Claude: Sydney and Melbourne.
+  au_inference_regions = ["ap-southeast-2", "ap-southeast-4"]
 }
 
 data "aws_caller_identity" "current" {}

@@ -13,14 +13,21 @@ resource "aws_bedrock_guardrail" "main" {
 
   content_policy_config {
     dynamic "filters_config" {
-      for_each = toset(["HATE", "INSULTS", "MISCONDUCT", "SEXUAL", "VIOLENCE"])
+      # MISCONDUCT is text-only: Bedrock rejects the IMAGE modality for it.
+      for_each = {
+        HATE       = ["TEXT", "IMAGE"]
+        INSULTS    = ["TEXT", "IMAGE"]
+        MISCONDUCT = ["TEXT"]
+        SEXUAL     = ["TEXT", "IMAGE"]
+        VIOLENCE   = ["TEXT", "IMAGE"]
+      }
 
       content {
-        type              = filters_config.value
+        type              = filters_config.key
         input_strength    = "MEDIUM"
         output_strength   = "MEDIUM"
-        input_modalities  = ["TEXT", "IMAGE"]
-        output_modalities = ["TEXT", "IMAGE"]
+        input_modalities  = filters_config.value
+        output_modalities = filters_config.value
       }
     }
   }

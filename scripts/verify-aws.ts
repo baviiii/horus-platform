@@ -2,7 +2,7 @@
  * Day-one smoke test for HORUS_AI_PROVIDER=aws: exercises every AWS-backed
  * path once against the real services and reports pass/fail per check.
  *
- * Writes only scratch data (tenant "verify", a random session in the
+ * Writes only scratch data (a placeholder tenant, a random session in the
  * playground index, one small S3 object) and deletes it again. Costs well
  * under a cent. Run after `tofu apply` in envs/aws-dev and filling
  * apps/web/.env.local from print-horus-env.ps1.
@@ -77,7 +77,9 @@ async function main(): Promise<void> {
   });
 
   const index = process.env.AZURE_SEARCH_PLAYGROUND_INDEX ?? 'horus-playground';
-  const tenantId = 'verify';
+  // UUID-shaped: the agent may call graph_lookup, which filters Postgres
+  // columns typed uuid. No real tenant has this id.
+  const tenantId = '00000000-0000-4000-8000-000000000001';
   const sessionId = `verify-${randomUUID().slice(0, 8)}`;
   const passages = [
     'TAFE SA delivers Fee-Free TAFE courses in aged care, early childhood education and cyber security.',

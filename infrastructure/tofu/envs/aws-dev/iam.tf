@@ -8,12 +8,17 @@ resource "aws_iam_user" "app" {
 }
 
 data "aws_iam_policy_document" "app" {
-  # Claude through the Messages-API endpoint (bedrock-mantle). Model ARNs on
-  # that endpoint aren't published per model, so this is scoped by action.
+  # Claude through the classic runtime endpoint (InvokeModel), via the AU
+  # cross-region inference profiles: the profile itself plus the models in
+  # the two Australian regions it routes to. A global. profile would need
+  # every destination region listed here.
   statement {
-    sid       = "ClaudeOnBedrock"
-    actions   = ["bedrock-mantle:CreateInference"]
-    resources = ["*"]
+    sid     = "ClaudeOnBedrock"
+    actions = ["bedrock:InvokeModel", "bedrock:InvokeModelWithResponseStream"]
+    resources = concat(
+      ["arn:aws:bedrock:${var.region}:${data.aws_caller_identity.current.account_id}:inference-profile/au.anthropic.claude-*"],
+      [for r in local.au_inference_regions : "arn:aws:bedrock:${r}::foundation-model/anthropic.claude-*"],
+    )
   }
 
   statement {
