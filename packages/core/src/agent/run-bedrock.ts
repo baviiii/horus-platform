@@ -138,8 +138,13 @@ export async function runKnowledgeAgentOnBedrock(params: RunAgentParams): Promis
   const registry = new CitationRegistry();
   let toolCallBudget = MAX_TOOL_CALLS;
 
+  // Set when the last tool round is reached: tools stay offered (see below)
+  // but no longer run.
+  let closing = false;
   const run: Run = async (display, detail, work) => {
-    if (--toolCallBudget < 0) return 'Tool budget exhausted — answer now with what you have.';
+    if (closing || --toolCallBudget < 0) {
+      return 'Tool budget exhausted — answer now with what you have.';
+    }
     emit({ kind: 'tool', name: display, status: 'start', ...(detail && { detail }) });
     try {
       return await work();
@@ -182,10 +187,27 @@ export async function runKnowledgeAgentOnBedrock(params: RunAgentParams): Promis
     instructions,
     messages: history,
     tools,
-    stopWhen: isStepCount(MAX_TOOL_ROUNDS + 1),
-    // Last step: answer with what has been gathered, no more tools.
-    prepareStep: ({ stepNumber }) =>
-      stepNumber === MAX_TOOL_ROUNDS ? { toolChoice: 'none' as const } : {},
+    // Last round: answer with what has been gathered. Not toolChoice 'none':
+    // Converse has no such mode, so the AI SDK emulates it by dropping the
+    // tools and, with them, every tool call and result already in the
+    // conversation — the model then answers without its evidence. The tools
+    // stay offered and the model is told to stop; a call it makes anyway gets
+    // the budget message instead of running, with one spare step to answer.
+    stopWhen: isStepCount(MAX_TOOL_ROUNDS + 2),
+    prepareStep: ({ stepNumber }) => {
+      if (stepNumber < MAX_TOOL_ROUNDS) return {};
+      closing = true;
+      return {
+        instructions: [
+          ...instructions,
+          {
+            role: 'system',
+            content:
+              'You have used all your tool calls. Answer the user now from the tool results above; do not call any more tools.',
+          },
+        ],
+      };
+    },
     maxOutputTokens: 8192,
     ...(signal && { abortSignal: signal }),
     onError: ({ error }) => {
