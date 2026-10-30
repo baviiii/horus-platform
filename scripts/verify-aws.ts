@@ -68,6 +68,28 @@ async function main(): Promise<void> {
     return `${res.model}, ${res.usage.inputTokens}→${res.usage.outputTokens} tokens`;
   });
 
+  // The shape real callers send (resume analysis, the interview MCP): no
+  // schema, a long answer the model is tempted to wrap in ```json fences.
+  await check('infer (JSON, resume-style)', async () => {
+    const res = await infer({
+      task: 'verify.aws.resume',
+      system:
+        'You are an ATS resume reviewer. Return ONLY JSON: {"score": 0-100, "strengths": string[], "gaps": string[]}.',
+      messages: [
+        {
+          role: 'user',
+          content:
+            'Role: Junior Data Analyst. Resume: BSc Mathematics 2025. Excel, SQL basics, Power BI course. Retail team leader 2 years.',
+        },
+      ],
+    });
+    const parsed = JSON.parse(res.content) as { score?: unknown; gaps?: unknown };
+    if (typeof parsed.score !== 'number' || !Array.isArray(parsed.gaps)) {
+      throw new Error(`unexpected shape ${res.content.slice(0, 200)}`);
+    }
+    return `score ${parsed.score}, ${parsed.gaps.length} gaps`;
+  });
+
   await check('embed (Titan, 512 dims)', async () => {
     const res = await embed(['software engineer in Adelaide', 'nurse in Darwin'], {
       dimensions: 512,
