@@ -231,13 +231,14 @@ data "aws_iam_policy_document" "mcp_deploy" {
     resources = [aws_ecr_repository.mcp.arn]
   }
 
-  # Roll the function onto the new image and wait for it. Code only: settings
-  # stay with Tofu.
+  # Roll the function onto the new image, wait for it, and find its URL for
+  # the health check. Code only: settings stay with Tofu.
   statement {
     sid = "RollFunction"
     actions = [
       "lambda:GetFunction",
       "lambda:GetFunctionConfiguration",
+      "lambda:GetFunctionUrlConfig",
       "lambda:UpdateFunctionCode",
     ]
     resources = [local.mcp_function_arn]
