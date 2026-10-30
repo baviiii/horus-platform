@@ -2,6 +2,11 @@ import 'server-only';
 import { prisma } from '@horus/db';
 import type { User } from '@supabase/supabase-js';
 
+/** Prisma's "table does not exist" error code. */
+export function isMissingTable(err: unknown): boolean {
+  return typeof err === 'object' && err !== null && (err as { code?: string }).code === 'P2021';
+}
+
 /** How long an invite stays claimable. */
 export const INVITE_TTL_DAYS = 14;
 
@@ -18,17 +23,24 @@ export async function acceptPendingInvites(user: User): Promise<string[]> {
   const email = user.email?.toLowerCase();
   if (!email || !user.email_confirmed_at) return [];
 
-  const invites = await prisma.tenantInvite.findMany({
-    where: {
-      email,
-      acceptedAt: null,
-      revokedAt: null,
-      expiresAt: { gt: new Date() },
-      tenant: { isActive: true },
-    },
-    include: { tenant: { select: { slug: true } } },
-    orderBy: { createdAt: 'asc' },
-  });
+  const invites = await prisma.tenantInvite
+    .findMany({
+      where: {
+        email,
+        acceptedAt: null,
+        revokedAt: null,
+        expiresAt: { gt: new Date() },
+        tenant: { isActive: true },
+      },
+      include: { tenant: { select: { slug: true } } },
+      orderBy: { createdAt: 'asc' },
+    })
+    // Every sign-in runs this; until tenant_invites exists in a database,
+    // there is simply nothing to claim rather than a broken login.
+    .catch((err: unknown) => {
+      if (isMissingTable(err)) return [];
+      throw err;
+    });
   if (invites.length === 0) return [];
 
   const joined: string[] = [];

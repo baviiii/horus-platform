@@ -3,6 +3,7 @@ import { prisma } from '@horus/db';
 import { PageHeader, Panel, Pill } from '@/components/app/shell';
 import { Reveal } from '@/components/motion';
 import { Button } from '@/components/ui/button';
+import { isMissingTable } from '@/lib/invites';
 import { managedKeyCreators, membersWithIdentity } from '@/lib/members';
 import { isPlatformAdmin, requireTenantMember } from '@/lib/tenant-context';
 import { cancelInviteAction, removeMemberAction, revokeApiKeyAction } from './actions';
@@ -18,10 +19,15 @@ export default async function SettingsPage({ params }: { params: Promise<{ tenan
 
   const [members, invites, apiKeys] = await Promise.all([
     membersWithIdentity(tenant.id),
-    prisma.tenantInvite.findMany({
-      where: { tenantId: tenant.id, acceptedAt: null, revokedAt: null },
-      orderBy: { createdAt: 'desc' },
-    }),
+    prisma.tenantInvite
+      .findMany({
+        where: { tenantId: tenant.id, acceptedAt: null, revokedAt: null },
+        orderBy: { createdAt: 'desc' },
+      })
+      .catch((err: unknown) => {
+        if (isMissingTable(err)) return [];
+        throw err;
+      }),
     prisma.apiKey.findMany({
       where: { tenantId: tenant.id, revokedAt: null },
       orderBy: { createdAt: 'desc' },
