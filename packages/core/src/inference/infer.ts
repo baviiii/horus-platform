@@ -18,9 +18,27 @@ import { aiSdkJson } from './ai-sdk-json.js';
 
 export type ModelTier = 'fast' | 'deep';
 
+/** The image formats Claude and GPT-4o both read. */
+export type InferImageType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp';
+
+/** One piece of a user message: text, or an image (base64, no data: prefix). */
+export type InferContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image'; image: string; mediaType: InferImageType };
+
 export interface InferMessage {
   role: 'user' | 'assistant' | 'system';
-  content: string;
+  /** Text, or for a user turn, text and images — e.g. the pages of a résumé. */
+  content: string | InferContentPart[];
+}
+
+/** The text of a message, for the places that only take text. */
+function textOf(content: InferMessage['content']): string {
+  if (typeof content === 'string') return content;
+  return content
+    .map((p) => (p.type === 'text' ? p.text : ''))
+    .filter(Boolean)
+    .join('\n');
 }
 
 export interface InferParams {
@@ -32,7 +50,7 @@ export interface InferParams {
   model?: ModelTier;
   temperature?: number;
   maxTokens?: number;
-  /** Optional JSON Schema. Reserved for a future strict structured-output mode. */
+  /** Optional JSON Schema the answer must fill (on AWS; Azure takes any JSON object). */
   schema?: Record<string, unknown>;
   schemaName?: string;
   /** Per-caller cost attribution. */
@@ -63,10 +81,24 @@ const mentionsJson = (s: string): boolean => /json/i.test(s);
  * open on a user turn.
  */
 async function inferWithAiSdk(params: InferParams): Promise<InferResult> {
-  const systemExtras = params.messages.filter((m) => m.role === 'system').map((m) => m.content);
+  const systemExtras = params.messages
+    .filter((m) => m.role === 'system')
+    .map((m) => textOf(m.content));
   const messages: ModelMessage[] = params.messages
     .filter((m) => m.role !== 'system')
-    .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+    .map((m): ModelMessage => {
+      if (m.role === 'assistant' || typeof m.content === 'string') {
+        return { role: m.role as 'user' | 'assistant', content: textOf(m.content) };
+      }
+      return {
+        role: 'user',
+        content: m.content.map((p) =>
+          p.type === 'text'
+            ? { type: 'text' as const, text: p.text }
+            : { type: 'image' as const, image: p.image, mediaType: p.mediaType },
+        ),
+      };
+    });
   if (messages[0]?.role !== 'user') {
     messages.unshift({ role: 'user', content: 'Begin.' });
   }
@@ -91,13 +123,26 @@ export async function infer(params: InferParams): Promise<InferResult> {
   // json_object mode requires the word "json" somewhere in the prompt. Our
   // callers always say "Return ONLY JSON", but guard the general case.
   const system =
-    mentionsJson(params.system) || params.messages.some((m) => mentionsJson(m.content))
+    mentionsJson(params.system) || params.messages.some((m) => mentionsJson(textOf(m.content)))
       ? params.system
       : `${params.system}\n\nRespond with a single valid JSON object.`;
 
   const messages = [
     { role: 'system', content: system },
-    ...params.messages.map((m) => ({ role: m.role, content: m.content })),
+    ...params.messages.map((m) => ({
+      role: m.role,
+      content:
+        typeof m.content === 'string'
+          ? m.content
+          : m.content.map((p) =>
+              p.type === 'text'
+                ? { type: 'text', text: p.text }
+                : {
+                    type: 'image_url',
+                    image_url: { url: `data:${p.mediaType};base64,${p.image}` },
+                  },
+            ),
+    })),
   ] as OpenAI.Chat.Completions.ChatCompletionMessageParam[];
 
   const completion = await client.chat.completions.create({

@@ -16,12 +16,52 @@ export const dynamic = 'force-dynamic';
  * inference scope, (3) generate, and return the model's JSON as a string.
  */
 
+/**
+ * Images ride in a user turn as base64 (no data: prefix). Bedrock takes up to
+ * 3.75 MB per image, 5 MB as base64; the request as a whole also has to fit
+ * Vercel's 4.5 MB body limit, so in practice a few compressed pages.
+ */
+const MAX_IMAGES = 5;
+const ContentPartSchema = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('text'), text: z.string() }),
+  z.object({
+    type: z.literal('image'),
+    image: z
+      .string()
+      .min(1)
+      .max(5_000_000)
+      .regex(/^[A-Za-z0-9+/]+={0,2}$/, 'image must be base64 without a data: prefix'),
+    mediaType: z.enum(['image/jpeg', 'image/png', 'image/gif', 'image/webp']),
+  }),
+]);
+
+const MessageSchema = z
+  .object({
+    role: z.enum(['user', 'assistant', 'system']),
+    content: z.union([z.string(), z.array(ContentPartSchema).min(1).max(20)]),
+  })
+  .refine((m) => typeof m.content === 'string' || m.role === 'user', {
+    message: 'Only user messages can carry images',
+  });
+
 const BodySchema = z.object({
   task: z.string().min(1),
   system: z.string().min(1),
   messages: z
-    .array(z.object({ role: z.enum(['user', 'assistant', 'system']), content: z.string() }))
-    .min(1),
+    .array(MessageSchema)
+    .min(1)
+    .refine(
+      (messages) =>
+        messages.reduce(
+          (n, m) =>
+            n +
+            (typeof m.content === 'string'
+              ? 0
+              : m.content.filter((p) => p.type === 'image').length),
+          0,
+        ) <= MAX_IMAGES,
+      { message: `At most ${MAX_IMAGES} images per request` },
+    ),
   model: z.enum(['fast', 'deep']).default('fast'),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().positive().max(32000).optional(),
