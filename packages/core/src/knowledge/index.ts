@@ -15,6 +15,7 @@ export { extractHtml, normalizeUrl, type ExtractedPage } from './extract-html.js
 export { extractPdf, type ExtractedPdf } from './extract-pdf.js';
 export { extractDocx, type ExtractedDocx } from './extract-docx.js';
 export { blockedUrlReason } from './net-guard.js';
+export { publicSourceUrl } from './public-links.js';
 export {
   ingestPdf,
   ingestUrl,

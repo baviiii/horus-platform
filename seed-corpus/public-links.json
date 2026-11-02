@@ -1,0 +1,29 @@
+{
+  "notes": "Where to send a reader for a corpus PDF that has no `url` in manifest.json: its published copy, or the official page it now lives on. Not a download source (some are web pages) — that is why these aren't `url` fields, which fetch-corpus would download. Keyed by file name, because indexed PDFs are stored as pdf:<file name>. Every link was opened and checked on 2026-11-02. After changing this file run: pnpm exec tsx scripts/build-public-links.ts",
+  "links": {
+    "Australian Jobs 2025.pdf": "https://www.dewr.gov.au/newsroom/articles/australian-jobs-2025-now-available",
+    "employment_projection_-_summary.pdf": "https://www.jobsandskills.gov.au/sites/default/files/2025-12/employment_projection_-_summary.pdf",
+    "jobs_and_skills_report_2025.pdf": "https://www.jobsandskills.gov.au/publications/jobs-and-skills-report-2025",
+    "jobs_and_skills_report_summary.pdf": "https://jobsandskills.gov.au/sites/default/files/2024-11/jobs_and_skills_report_summary.pdf",
+    "jsa_work_plan_2025-26.pdf": "https://www.jobsandskills.gov.au/publications/2025-26-work-plan",
+    "DSD779-Jobs-and-Skills-Outlook-FAv2-WEB.pdf": "https://skills.sa.gov.au/assets/uploads/downloads/skillsHub/DSD779-Jobs-and-Skills-Outlook-FAv2-WEB.pdf",
+    "SASC-2024-2025-Annual-Report.pdf": "https://sascstore.blob.core.windows.net/sasc-storage/assets/Annual-Report-2024-25/SASC-2024-2025-Annual-Report.pdf",
+    "SASC-Strategic-Plan-2025.pdf": "https://sascstore.blob.core.windows.net/sasc-storage/publications/SASC-Strategic-Plan-2025.pdf",
+    "Workforce Strategy.pdf": "https://www.education.sa.gov.au/department/strategies-and-plans/workforce-strategy",
+    "workforce-strategy-placemat.pdf": "https://www.education.sa.gov.au/department/strategies-and-plans/workforce-strategy",
+    "Regional-Jobs-Support-and-Incentive-Program-Program-Guidelines_2022.pdf": "https://business.sa.gov.au/downloads/regional-jobs-incentive-program",
+    "interview-preparation-guide.pdf": "https://www.agriculture.gov.au/sites/default/files/documents/interview-preparation-guide.pdf",
+    "Preparing for an interview _ Australian Human Rights Commission.pdf": "https://humanrights.gov.au/resource-hub/resources-for-organisations-businesses/disability-resources-employers/includeability-equality-work/career-and-job-seeking-resources/preparing-for-an-interview",
+    "12_-_includeability_-_guide_-_preparing_for_an_interview_accessible.pdf": "https://humanrights.gov.au/resource-hub/resources-for-organisations-businesses/disability-resources-employers/includeability-equality-work/career-and-job-seeking-resources/preparing-for-an-interview",
+    "How to write a winning resume - face2face Recruitment.pdf": "https://www.f2frecruitment.com.au/how-to-write-a-winning-resume/",
+    "Selection criteria_ How to respond - face2face Recruitment.pdf": "https://www.f2frecruitment.com.au/selection-criteria-how-to-respond/",
+    "Key selection criteria for goverment jobs _ Hays.pdf": "https://www.hays.com.au/jobs/government-public-sector-jobs/key-selection-criteria",
+    "addressing-selection-criteria.pdf": "https://iworkforsa-redeployment.bigredsky.com/iworkforsa/docs/recprocres/addressing-selection-criteria.pdf",
+    "Job Jumpstart Job Search Basics Workbook.pdf": "https://jobjumpstart.gov.au/article/job-search-basics-workbook",
+    "OCPSE-Recruitment-Guideline.pdf": "https://www.publicsector.sa.gov.au/__data/assets/pdf_file/0020/214076/20260127_Guideline-Recruitment.pdf",
+    "Civics and citizenship reforms.pdf": "https://www.education.sa.gov.au/department/strategies-and-plans/civics-citizenship-reforms",
+    "key-initiative-music-education-strategy.pdf": "https://www.education.sa.gov.au/music",
+    "south-australias-hydrogen-action-plan-online.pdf": "https://www.hydrogen.sa.gov.au",
+    "South-Australias-Blue-Bio-Industry.pdf": "https://invest.sa.gov.au/sectors/food-wine-and-agribusiness"
+  }
+}

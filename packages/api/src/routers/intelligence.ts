@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { embedQuery, searchKnowledge } from '@horus/core/knowledge';
+import { embedQuery, publicSourceUrl, searchKnowledge } from '@horus/core/knowledge';
 import { infer } from '@horus/core/inference';
 import { router, scopedProcedure } from '../trpc.js';
 import type { Context } from '../context.js';
@@ -124,7 +124,7 @@ export const intelligenceRouter = router({
       const passages = hits.map((hit, i) => ({
         n: i + 1,
         title: hit.title,
-        sourceUrl: hit.sourceUrl,
+        sourceUrl: publicSourceUrl(hit.sourceUrl),
         content: hit.content.slice(0, 1100),
       }));
 

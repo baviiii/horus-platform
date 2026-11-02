@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { occupationProfile, pathway, sectorProfile, skillGap } from '@horus/module-careers';
-import { embedQuery, searchKnowledge } from '@horus/core/knowledge';
+import { embedQuery, publicSourceUrl, searchKnowledge } from '@horus/core/knowledge';
 import { router, scopedProcedure } from '../trpc.js';
 
 /**
@@ -143,7 +143,7 @@ export const careersRouter = router({
         .map((hit) => ({
           title: hit.title,
           excerpt: hit.content.slice(0, 500),
-          sourceUrl: hit.sourceUrl,
+          sourceUrl: publicSourceUrl(hit.sourceUrl),
           score: hit.score,
         }));
 

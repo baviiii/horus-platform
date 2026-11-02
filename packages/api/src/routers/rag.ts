@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
-import { embedQuery, searchKnowledge } from '@horus/core/knowledge';
+import { embedQuery, publicSourceUrl, searchKnowledge } from '@horus/core/knowledge';
 import { infer } from '@horus/core/inference';
 import { moderateText } from '@horus/core/safety';
 import { router, scopedProcedure } from '../trpc.js';
@@ -90,7 +90,7 @@ export const ragRouter = router({
         // Both are what a consumer renders a citation from — a page to cite and
         // a link to open. Only chunks from the indexer pipeline carry a page.
         ...(hit.pageNumber !== undefined && { pageNumber: hit.pageNumber }),
-        sourceUrl: hit.sourceUrl,
+        sourceUrl: publicSourceUrl(hit.sourceUrl),
         excerpt: hit.content.slice(0, 400),
         score: hit.score,
       }));
@@ -248,7 +248,7 @@ export const ragRouter = router({
       const sources = hits.map((hit, i) => ({
         n: i + 1,
         title: hit.title,
-        sourceUrl: hit.sourceUrl,
+        sourceUrl: publicSourceUrl(hit.sourceUrl),
         excerpt: hit.content.slice(0, 300),
       }));
 
