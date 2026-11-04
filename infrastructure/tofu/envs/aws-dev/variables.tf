@@ -136,7 +136,7 @@ variable "mcp_settings" {
 }
 
 variable "mcp_secrets" {
-  description = "Secret MCP settings, as env vars: SUPABASE_ANON_KEY, HORUS_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, … Kept in gitignored tfvars and local state."
+  description = "Secret MCP settings, as env vars: SUPABASE_ANON_KEY, HORUS_API_KEY, REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET, YOUTUBE_API_KEY (Study videos), … Kept in gitignored tfvars and local state."
   type        = map(string)
   default     = {}
   sensitive   = true
