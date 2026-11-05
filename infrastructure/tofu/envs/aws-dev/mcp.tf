@@ -69,8 +69,8 @@ data "aws_iam_policy_document" "mcp_assume" {
   }
 }
 
-# Logs only. The server reaches Supabase and Horus over HTTPS with keys from
-# its settings; it calls no AWS service itself.
+# Logs, plus calling its web search gateway (web-search.tf). The server reaches
+# Supabase and Horus over HTTPS with keys from its settings.
 resource "aws_iam_role" "mcp" {
   name               = local.mcp_name
   assume_role_policy = data.aws_iam_policy_document.mcp_assume.json
@@ -114,6 +114,11 @@ resource "aws_lambda_function" "mcp" {
         NODE_ENV    = "production"
         PORT        = "8787"
         CORS_ORIGIN = var.mcp_cors_origin
+
+        # Study's web search (web-search.tf): requests are signed with this
+        # function's own role, so only the address is needed.
+        WEB_SEARCH_GATEWAY_URL = aws_bedrockagentcore_gateway.web_search.gateway_url
+        WEB_SEARCH_REGION      = var.region
 
         # Lambda Web Adapter: forward to the Express port, wait for /health
         # before the first request, and stream responses (MCP answers as SSE).
