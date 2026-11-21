@@ -224,7 +224,8 @@ export const Field = React.forwardRef<
   HTMLInputElement,
   React.InputHTMLAttributes<HTMLInputElement> & { label?: string; hint?: string }
 >(({ className, label, hint, id, ...props }, ref) => {
-  const inputId = id ?? React.useId();
+  const generatedId = React.useId();
+  const inputId = id ?? generatedId;
   return (
     <label className="block space-y-2" htmlFor={inputId}>
       {label && (

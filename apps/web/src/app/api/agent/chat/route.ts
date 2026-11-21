@@ -1,7 +1,11 @@
 import { z } from 'zod';
 import { prisma } from '@horus/db';
 import { runKnowledgeAgent, type AgentEvent } from '@horus/core/agent';
-import { ensureKnowledgeIndex } from '@horus/core/knowledge';
+import { blockedUrlReason, ensureKnowledgeIndex } from '@horus/core/knowledge';
+import {
+  isAllowedTenantSecretRef,
+  resolveInstalledMarketplaceAttachments,
+} from '@horus/core/marketplace';
 import { moderateText } from '@horus/core/safety';
 import type { McpServerRef } from '@horus/core/mcp';
 import { getCurrentUser } from '@/lib/supabase/server';
@@ -40,21 +44,27 @@ async function requireMember(slug: string) {
     where: { tenantId_userId: { tenantId: tenant.id, userId: user.id } },
   });
   if (!member) return { error: Response.json({ error: 'Not a member' }, { status: 403 }) };
-  return { tenant, user };
+  return { tenant, user, member };
 }
 
 async function tenantMcpServers(tenantId: string): Promise<McpServerRef[]> {
   const rows = await prisma.connection.findMany({
     where: { tenantId, kind: 'MCP', status: { not: 'DISABLED' } },
   });
-  return rows.map((row) => {
+  return rows.flatMap((row) => {
+    if (blockedUrlReason(row.endpoint)) return [];
+    const allowedSecretRef = isAllowedTenantSecretRef(row.secretRef);
     const secret =
-      row.authType === 'bearer' && row.secretRef ? process.env[row.secretRef] : undefined;
-    return {
-      label: row.slug,
-      url: row.endpoint,
-      headers: secret ? { Authorization: `Bearer ${secret}` } : undefined,
-    };
+      row.authType === 'bearer' && row.secretRef && allowedSecretRef
+        ? process.env[row.secretRef]
+        : undefined;
+    return [
+      {
+        label: row.slug,
+        url: row.endpoint,
+        headers: secret ? { Authorization: `Bearer ${secret}` } : undefined,
+      },
+    ];
   });
 }
 
@@ -85,7 +95,7 @@ export async function POST(req: Request) {
 
   const auth = await requireMember(parsed.data.tenant);
   if ('error' in auth) return auth.error;
-  const { tenant, user } = auth;
+  const { tenant, user, member } = auth;
 
   // Resolve the agent (if any) — it shapes persona, partition, and session context.
   let agentRow: {
@@ -170,10 +180,19 @@ export async function POST(req: Request) {
     })
   ).reverse();
 
-  const [mcpServers] = await Promise.all([
-    tenantMcpServers(tenant.id),
+  const canCallMcp = member.role !== 'VIEWER';
+  const [workspaceMcpServers, marketplaceAttachments] = await Promise.all([
+    canCallMcp ? tenantMcpServers(tenant.id) : Promise.resolve([]),
+    resolveInstalledMarketplaceAttachments(tenant.id, tenant.plan),
     ensureKnowledgeIndex(indexName()),
   ]);
+  const seenLabels = new Set(workspaceMcpServers.map((s) => s.label));
+  const mcpServers = [
+    ...workspaceMcpServers,
+    ...(canCallMcp
+      ? marketplaceAttachments.mcpServers.filter((s) => !seenLabels.has(s.label))
+      : []),
+  ];
 
   const startedAt = Date.now();
   const sessionIdFinal = session.id;
@@ -205,6 +224,9 @@ export async function POST(req: Request) {
         ...(agentRow?.persona && { persona: agentRow.persona, personaName: agentRow.name }),
         ...(scopedSourceIds && { sourceIds: scopedSourceIds }),
         mcpServers,
+        ...(marketplaceAttachments.indexes.length > 0 && {
+          marketplaceIndexes: marketplaceAttachments.indexes,
+        }),
         emit,
         signal: req.signal,
       });

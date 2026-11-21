@@ -1,0 +1,30 @@
+export {
+  INDEX_MCP_TOOLS,
+  PLAN_RANK,
+  getMarketplaceCatalogItem,
+  isAllowedTenantSecretRef,
+  isMissingMarketplaceTable,
+  listInstalledMarketplaceSlugs,
+  listMarketplaceCatalog,
+  meetsPlan,
+  resolveInstalledMarketplaceAttachments,
+  resolveMarketplaceTarget,
+  type InstalledMarketplaceIndex,
+  type MarketplaceCatalogItem,
+  type MarketplaceIndexStats,
+  type MarketplaceListingKind,
+  type MarketplacePlan,
+  type MarketplaceToolSpec,
+  type ResolvedMarketplaceTarget,
+} from './catalog.js';
+
+export {
+  MarketplaceInputError,
+  executeIndexAsk,
+  executeIndexCategories,
+  executeIndexGraphLookup,
+  executeIndexSearch,
+  executeMcpGatewayCall,
+  type IndexSearchHit,
+  type MarketplaceCaller,
+} from './execute.js';

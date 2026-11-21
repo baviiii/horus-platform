@@ -154,6 +154,7 @@ export function Section({
 const navLinks = [
   { href: '/#product', label: 'Product' },
   { href: '/#capabilities', label: 'Capabilities' },
+  { href: '/marketplace', label: 'Marketplace' },
   { href: '/playground', label: 'Playground' },
   { href: '/#pricing', label: 'Pricing' },
   { href: '/docs', label: 'Docs' },
@@ -215,6 +216,7 @@ const footerCols = [
     title: 'Product',
     links: [
       { href: '/#capabilities', label: 'Capabilities' },
+      { href: '/marketplace', label: 'Marketplace & MCP' },
       { href: '/#pricing', label: 'Pricing' },
       { href: '/docs', label: 'Documentation' },
       { href: '/changelog', label: 'Changelog' },

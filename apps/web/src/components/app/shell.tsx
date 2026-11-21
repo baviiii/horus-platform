@@ -491,12 +491,12 @@ export function SparkLine({
   height?: number;
   className?: string;
 }) {
+  const id = React.useId();
   if (!data?.length) return null;
   const max = Math.max(...data);
   const min = Math.min(...data);
   const span = max - min || 1;
   const step = width / Math.max(data.length - 1, 1);
-  const id = React.useId();
   const points = data.map((v, i) => `${i * step},${height - ((v - min) / span) * height}`);
   const line = points.join(' ');
   const area = `${points.join(' ')} ${width},${height} 0,${height}`;

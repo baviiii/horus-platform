@@ -18,6 +18,7 @@ import { knowledgeRouter } from './knowledge.js';
 import { agentsRouter } from './agents.js';
 import { automationsRouter } from './automations.js';
 import { usageRouter } from './usage.js';
+import { marketplaceRouter } from './marketplace.js';
 
 export const appRouter = router({
   health: healthRouter,
@@ -42,6 +43,7 @@ export const appRouter = router({
   agents: agentsRouter,
   automations: automationsRouter,
   usage: usageRouter,
+  marketplace: marketplaceRouter,
 });
 
 export type AppRouter = typeof appRouter;

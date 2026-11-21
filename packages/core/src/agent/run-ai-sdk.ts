@@ -154,7 +154,39 @@ export async function runKnowledgeAgentWithAiSdk(params: RunAgentParams): Promis
   };
 
   const mcp = params.mcpServers?.length ? await buildMcpTools(params.mcpServers, run) : null;
-  const tools: ToolSet = { ...knowledgeTools(scope, registry, run), ...(mcp?.tools ?? {}) };
+  const mktTools: ToolSet = {};
+  const mktLabels: string[] = [];
+  for (const idx of params.marketplaceIndexes ?? []) {
+    const toolName = `mkt__${idx.label}__search`;
+    if (toolName.length > 64) continue;
+    const idxScope: ToolScope = {
+      indexName: params.indexName,
+      tenantId: idx.targetTenantId,
+      sessionId: 'workspace',
+      topK: params.topK ?? 8,
+      ...(idx.sourceIds && { sourceIds: idx.sourceIds }),
+    };
+    mktTools[toolName] = tool({
+      description: `Search the subscribed Marketplace index "${idx.name}". Returns numbered passages you must cite inline as [n].`,
+      inputSchema: jsonSchema<ToolInput>({
+        type: 'object',
+        properties: {
+          query: { type: 'string', description: 'Search query for this marketplace index.' },
+        },
+        required: ['query'],
+      }),
+      execute: (input: ToolInput) =>
+        run(`marketplace:${idx.slug}`, String(input.query ?? ''), () =>
+          executeSearchKnowledge(idxScope, registry, String(input.query ?? '')),
+        ),
+    });
+    mktLabels.push(`${idx.name} (${toolName})`);
+  }
+  const tools: ToolSet = {
+    ...knowledgeTools(scope, registry, run),
+    ...(mcp?.tools ?? {}),
+    ...mktTools,
+  };
 
   const history = toHistory(params.messages);
   if (history.length === 0) {
@@ -176,7 +208,7 @@ export async function runKnowledgeAgentWithAiSdk(params: RunAgentParams): Promis
       role: 'system',
       content:
         (await describeSources(scope)) +
-        mcpNote(mcp?.labels ?? []) +
+        mcpNote([...(mcp?.labels ?? []), ...mktLabels]) +
         personaNote(params.persona, params.personaName),
     },
   ];

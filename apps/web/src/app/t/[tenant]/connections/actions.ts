@@ -3,9 +3,23 @@
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@horus/db';
 import { checkMcpHealth, listMcpTools, type McpServerRef } from '@horus/core/mcp';
+import { blockedUrlReason } from '@horus/core/knowledge';
+import { isAllowedTenantSecretRef } from '@horus/core/marketplace';
 import { requireTenantMember } from '@/lib/tenant-context';
 
 const SLUG_RE = /^[a-z][a-z0-9_]{1,31}$/;
+
+function connectionSafetyError(endpoint: string, secretRef: string | null): string | null {
+  const blocked = blockedUrlReason(endpoint);
+  if (blocked) return `MCP endpoint is not allowed (${blocked}).`;
+  if (process.env.NODE_ENV === 'production' && !endpoint.toLowerCase().startsWith('https://')) {
+    return 'MCP endpoints must use HTTPS in production.';
+  }
+  if (secretRef && !isAllowedTenantSecretRef(secretRef)) {
+    return 'MCP secret references must begin with MCP_SECRET_.';
+  }
+  return null;
+}
 
 function toRef(conn: {
   slug: string;
@@ -13,6 +27,8 @@ function toRef(conn: {
   authType: string;
   secretRef: string | null;
 }): McpServerRef {
+  const safetyError = connectionSafetyError(conn.endpoint, conn.secretRef);
+  if (safetyError) throw new Error(safetyError);
   const secret =
     conn.authType === 'bearer' && conn.secretRef ? process.env[conn.secretRef] : undefined;
   return {
@@ -50,6 +66,7 @@ export async function addConnectionAction(slug: string, formData: FormData): Pro
   if (!name || name.length > 80 || !SLUG_RE.test(connSlug) || !/^https?:\/\/.+/.test(endpoint)) {
     return;
   }
+  if (connectionSafetyError(endpoint, secretRef)) return;
 
   const authType = secretRef ? 'bearer' : 'none';
   const probed = await probe(toRef({ slug: connSlug, endpoint, authType, secretRef }));
@@ -79,6 +96,20 @@ export async function testConnectionsAction(slug: string): Promise<void> {
   });
   await Promise.all(
     rows.map(async (row) => {
+      const safetyError = connectionSafetyError(row.endpoint, row.secretRef);
+      if (safetyError) {
+        await prisma.connection.update({
+          where: { id: row.id },
+          data: {
+            status: 'ERROR',
+            toolCount: 0,
+            tools: [],
+            lastError: safetyError,
+            lastCheckedAt: new Date(),
+          },
+        });
+        return;
+      }
       const probed = await probe(toRef(row));
       await prisma.connection.update({ where: { id: row.id }, data: probed });
     }),

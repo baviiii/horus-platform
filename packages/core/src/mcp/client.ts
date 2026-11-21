@@ -3,9 +3,9 @@
  *
  * Tenants register MCP servers (interview-coach-mcp is the first); Horus
  * connects over streamable HTTP, discovers their tools, and exposes them to
- * the agent as function tools it executes here. Client-side execution means
- * a server on localhost, a private network, or the public internet all work
- * the same — no dependency on Foundry being able to reach the URL.
+ * the agent as function tools it executes here. Tenant-configured endpoints
+ * must be public HTTPS services; private and link-local addresses are blocked
+ * to prevent a tenant from reaching Horus's internal network.
  *
  * Servers like interview-coach-mcp are stateless per request, so we connect
  * fresh per operation and keep only the discovered tool list cached.

@@ -3,14 +3,18 @@ import { Container, MarketingFooter, MarketingNav, Eyebrow } from '@/components/
 
 export const metadata = { title: 'Docs · Horus' };
 
-const sections = [
+const sections: Array<{
+  title: string;
+  description: string;
+  links: Array<{ href: string; label: string; soon?: boolean }>;
+}> = [
   {
     title: 'Get started',
     description: 'Five minutes to your first answer with citations.',
     links: [
       { href: '/docs/quickstart', label: 'Quickstart' },
-      { href: '/docs', label: 'Install the SDK', soon: true },
-      { href: '/docs', label: 'Authentication & API keys', soon: true },
+      { href: '/marketplace', label: 'Marketplace & MCP Hub' },
+      { href: '/marketplace/workspace', label: 'Connect your Index via MCP & REST' },
     ],
   },
   {

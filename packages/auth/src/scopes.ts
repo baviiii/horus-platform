@@ -20,6 +20,9 @@ export const SCOPES = {
   INCIDENTS_READ: 'incidents:read',
   INCIDENTS_WRITE: 'incidents:write',
   INTELLIGENCE_INFER: 'intelligence:infer',
+  MCP_CALL: 'mcp:call',
+  MARKETPLACE_READ: 'marketplace:read',
+  MARKETPLACE_WRITE: 'marketplace:write',
   ADMIN: 'admin:*',
 } as const;
 

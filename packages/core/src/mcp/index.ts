@@ -6,3 +6,4 @@ export {
   type McpServerRef,
   type McpToolInfo,
 } from './client.js';
+export { handleMarketplaceMcpRequest } from './server.js';

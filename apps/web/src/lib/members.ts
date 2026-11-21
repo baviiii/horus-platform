@@ -17,7 +17,8 @@ export interface MemberWithIdentity extends TenantMember {
   isHorusTeam: boolean;
 }
 
-async function emailsById(ids: string[]): Promise<Map<string, string>> {
+/** `null` means the lookup itself failed — not the same as "no emails". */
+async function emailsById(ids: string[]): Promise<Map<string, string> | null> {
   if (ids.length === 0) return new Map();
   try {
     const rows = await prisma.$queryRaw<Array<{ id: string; email: string | null }>>`
@@ -25,8 +26,7 @@ async function emailsById(ids: string[]): Promise<Map<string, string>> {
     `;
     return new Map(rows.filter((r) => r.email).map((r) => [r.id, r.email!]));
   } catch {
-    // Without access to auth.users the list still renders, just without addresses.
-    return new Map();
+    return null;
   }
 }
 
@@ -35,7 +35,8 @@ export async function membersWithIdentity(tenantId: string): Promise<MemberWithI
     where: { tenantId },
     orderBy: { joinedAt: 'asc' },
   });
-  const emails = await emailsById(members.map((m) => m.userId));
+  // Display-only: a failed lookup still renders, just without addresses.
+  const emails = (await emailsById(members.map((m) => m.userId))) ?? new Map();
   return members.map((m) => {
     const email = emails.get(m.userId) ?? null;
     return { ...m, email, isHorusTeam: isPlatformAdmin(email) };
@@ -54,10 +55,27 @@ export async function userIdByEmail(email: string): Promise<string | null> {
   }
 }
 
-/** Ids among `userIds` that belong to Horus operators. */
+/**
+ * Ids among `userIds` that belong to Horus operators.
+ *
+ * An unavailable identity lookup is an operational error, not evidence that
+ * every account belongs to Horus. Throwing gives the UI/server action a visible
+ * failure instead of silently making member and key management no-op.
+ */
 export async function horusTeamIds(userIds: string[]): Promise<Set<string>> {
+  if (userIds.length === 0) return new Set();
   const emails = await emailsById(userIds);
-  return new Set([...emails].filter(([, email]) => isPlatformAdmin(email)).map(([id]) => id));
+  if (!emails) {
+    throw new Error(
+      'Identity lookup is temporarily unavailable. No members or API keys were changed; try again.',
+    );
+  }
+  const team = new Set<string>();
+  for (const id of userIds) {
+    const email = emails.get(id);
+    if (!email || isPlatformAdmin(email)) team.add(id);
+  }
+  return team;
 }
 
 /**

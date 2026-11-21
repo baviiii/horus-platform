@@ -71,6 +71,14 @@ export interface RunAgentParams {
   personaName?: string;
   /** Tenant-connected MCP tool servers; their tools attach to this run. */
   mcpServers?: McpServerRef[];
+  /** Subscribed Marketplace knowledge indexes attached to this workspace. */
+  marketplaceIndexes?: Array<{
+    slug: string;
+    label: string;
+    name: string;
+    targetTenantId: string;
+    sourceIds?: string[];
+  }>;
   /** Restrict retrieval to these sourceIds (collection-scoped agents). */
   sourceIds?: string[];
 }
@@ -184,8 +192,40 @@ export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
   let toolCallBudget = MAX_TOOL_CALLS;
 
   const mcp = params.mcpServers?.length ? await buildMcpToolset(params.mcpServers) : null;
-  const mcpNote = mcpInstructions(mcp?.labels ?? []);
+  const mktTools: ToolDefinitionUnion[] = [];
+  const mktRoute = new Map<string, ToolScope & { slug: string }>();
+  const mktLabels: string[] = [];
+  for (const idx of params.marketplaceIndexes ?? []) {
+    const toolName = `mkt__${idx.label}__search`;
+    if (toolName.length > 64) continue;
+    mktTools.push({
+      type: 'function',
+      function: {
+        name: toolName,
+        description: `Search the subscribed Marketplace index "${idx.name}". Returns numbered passages you must cite inline as [n].`,
+        parameters: {
+          type: 'object',
+          properties: {
+            query: { type: 'string', description: 'Search query for this marketplace index.' },
+          },
+          required: ['query'],
+        },
+      },
+    });
+    mktRoute.set(toolName, {
+      slug: idx.slug,
+      indexName: params.indexName,
+      tenantId: idx.targetTenantId,
+      sessionId: 'workspace',
+      topK: params.topK ?? 8,
+      ...(idx.sourceIds && { sourceIds: idx.sourceIds }),
+    });
+    mktLabels.push(`${idx.name} (${toolName})`);
+  }
+
+  const mcpNote = mcpInstructions([...(mcp?.labels ?? []), ...mktLabels]);
   const personaNote = personaInstructions(params.persona, params.personaName);
+  const extraTools = [...(mcp?.tools ?? []), ...mktTools];
 
   const thread = await client.threads.create({ abortSignal: signal });
   try {
@@ -195,7 +235,7 @@ export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
       additionalInstructions: (await describeSources(scope)) + mcpNote + personaNote,
       additionalMessages: params.messages.map((m) => ({ role: m.role, content: m.content })),
       // Tool list override: base tools + this tenant's MCP tools for this run.
-      tools: mcp && mcp.tools.length > 0 ? [...buildAgentTools(), ...mcp.tools] : undefined,
+      tools: extraTools.length > 0 ? [...buildAgentTools(), ...extraTools] : undefined,
       maxCompletionTokens: 1100,
       parallelToolCalls: true,
     });
@@ -304,6 +344,16 @@ export async function runKnowledgeAgent(params: RunAgentParams): Promise<void> {
           emit({ kind: 'tool', name: display, status: 'start' });
           result = await callMcpTool(mcpTarget.ref, mcpTarget.tool, parsed);
           emit({ kind: 'tool', name: display, status: 'end' });
+        } else if (mktRoute.has(name) && typeof parsed.query === 'string') {
+          const mktTarget = mktRoute.get(name)!;
+          emit({
+            kind: 'tool',
+            name: `marketplace:${mktTarget.slug}`,
+            status: 'start',
+            detail: parsed.query,
+          });
+          result = await executeSearchKnowledge(mktTarget, registry, parsed.query);
+          emit({ kind: 'tool', name: `marketplace:${mktTarget.slug}`, status: 'end' });
         } else {
           result = `Unknown tool or invalid arguments for "${name}".`;
         }

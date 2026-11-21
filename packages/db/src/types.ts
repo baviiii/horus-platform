@@ -18,4 +18,9 @@ export type {
   UsageMeter,
   AlertSeverity,
   AlertStatus,
+  MarketplaceListing,
+  MarketplaceInstall,
+  MarketplaceKind,
+  MarketplaceStatus,
+  MarketplaceVisibility,
 } from '@prisma/client';

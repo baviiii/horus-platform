@@ -15,6 +15,7 @@
     "build": "tsc -b",
     "clean": "rm -rf dist .turbo",
     "lint": "eslint .",
+    "test": "tsc -b && node --test test/*.test.mjs",
     "typecheck": "tsc --noEmit",
     "create-dev-key": "tsx scripts/create-dev-key.ts"
   },

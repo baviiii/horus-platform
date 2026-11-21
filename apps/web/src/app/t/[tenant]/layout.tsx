@@ -80,6 +80,7 @@ export default async function TenantLayout({
             ]
           : []),
         { href: `/t/${slug}/connections`, label: 'Connections', icon: <IconPlug /> },
+        { href: `/t/${slug}/marketplace`, label: 'Marketplace', icon: <IconStore /> },
         {
           href: `/t/${slug}/alerts`,
           label: 'Alerts',
@@ -215,6 +216,29 @@ function IconPlug() {
         strokeWidth="1.4"
         strokeLinecap="round"
         strokeLinejoin="round"
+      />
+    </Icon>
+  );
+}
+function IconStore() {
+  return (
+    <Icon>
+      <rect
+        x="2.5"
+        y="2.5"
+        width="4.5"
+        height="4.5"
+        rx="1"
+        stroke="currentColor"
+        strokeWidth="1.4"
+      />
+      <rect x="9" y="2.5" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+      <rect x="2.5" y="9" width="4.5" height="4.5" rx="1" stroke="currentColor" strokeWidth="1.4" />
+      <path
+        d="M11.25 9v4.5M9 11.25h4.5"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
       />
     </Icon>
   );

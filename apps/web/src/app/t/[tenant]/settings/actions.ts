@@ -15,6 +15,8 @@ const DEFAULT_SCOPES = [
   'entities:*',
   'alerts:*',
   'connections:*',
+  'mcp:*',
+  'marketplace:*',
   'intelligence:infer',
 ];
 

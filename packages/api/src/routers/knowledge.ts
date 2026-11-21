@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
+import { isMissingMarketplaceTable } from '@horus/core/marketplace';
 import { router, scopedProcedure } from '../trpc.js';
 
 const slugify = (s: string) =>
@@ -105,6 +106,25 @@ export const knowledgeRouter = router({
     .mutation(async ({ ctx, input }) => {
       const row = await ctx.db.knowledgeCollection.findUnique({ where: { id: input.id } });
       if (!row || row.tenantId !== ctx.tenant.id) throw new TRPCError({ code: 'NOT_FOUND' });
+      const publishedListings = await ctx.prisma.marketplaceListing
+        .count({
+          where: {
+            publisherTenantId: ctx.tenant.id,
+            collectionId: row.id,
+            status: { not: 'ARCHIVED' },
+          },
+        })
+        .catch((err: unknown) => {
+          if (isMissingMarketplaceTable(err)) return 0;
+          throw err;
+        });
+      if (publishedListings > 0) {
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message:
+            'This collection backs a Marketplace listing. Archive or delete that listing before deleting the collection.',
+        });
+      }
       // Documents keep their collectionId as NULL (SetNull on the relation).
       await ctx.db.knowledgeCollection.delete({ where: { id: input.id } });
       return { deleted: true };

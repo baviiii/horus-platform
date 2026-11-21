@@ -1,8 +1,12 @@
 import { z } from 'zod';
 import { prisma } from '@horus/db';
-import { validateApiKey, hasAllScopes } from '@horus/auth';
+import { validateApiKey, hasAllScopes, hasScope } from '@horus/auth';
 import { runKnowledgeAgent, type AgentEvent } from '@horus/core/agent';
-import { ensureKnowledgeIndex } from '@horus/core/knowledge';
+import { blockedUrlReason, ensureKnowledgeIndex } from '@horus/core/knowledge';
+import {
+  isAllowedTenantSecretRef,
+  resolveInstalledMarketplaceAttachments,
+} from '@horus/core/marketplace';
 import { moderateText } from '@horus/core/safety';
 import type { McpServerRef } from '@horus/core/mcp';
 import { sseResponse } from '../../playground/_lib/sse';
@@ -58,14 +62,20 @@ async function tenantMcpServers(tenantId: string): Promise<McpServerRef[]> {
   const rows = await prisma.connection.findMany({
     where: { tenantId, kind: 'MCP', status: { not: 'DISABLED' } },
   });
-  return rows.map((row) => {
+  return rows.flatMap((row) => {
+    if (blockedUrlReason(row.endpoint)) return [];
+    const allowedSecretRef = isAllowedTenantSecretRef(row.secretRef);
     const secret =
-      row.authType === 'bearer' && row.secretRef ? process.env[row.secretRef] : undefined;
-    return {
-      label: row.slug,
-      url: row.endpoint,
-      headers: secret ? { Authorization: `Bearer ${secret}` } : undefined,
-    };
+      row.authType === 'bearer' && row.secretRef && allowedSecretRef
+        ? process.env[row.secretRef]
+        : undefined;
+    return [
+      {
+        label: row.slug,
+        url: row.endpoint,
+        headers: secret ? { Authorization: `Bearer ${secret}` } : undefined,
+      },
+    ];
   });
 }
 
@@ -147,10 +157,23 @@ export async function POST(req: Request) {
     })
   ).reverse();
 
-  const [mcpServers] = await Promise.all([
-    tenantMcpServers(tenant.id),
+  const canCallMcp = hasScope(validated.scopes, 'mcp:call');
+  const canReadConnections = hasScope(validated.scopes, 'connections:read');
+  const canReadMarketplace = hasScope(validated.scopes, 'marketplace:read');
+  const [workspaceMcpServers, marketplaceAttachments] = await Promise.all([
+    canCallMcp && canReadConnections ? tenantMcpServers(tenant.id) : Promise.resolve([]),
+    canReadMarketplace
+      ? resolveInstalledMarketplaceAttachments(tenant.id, tenant.plan)
+      : Promise.resolve({ mcpServers: [], indexes: [] }),
     ensureKnowledgeIndex(indexName()),
   ]);
+  const seenLabels = new Set(workspaceMcpServers.map((s) => s.label));
+  const mcpServers = [
+    ...workspaceMcpServers,
+    ...(canCallMcp
+      ? marketplaceAttachments.mcpServers.filter((s) => !seenLabels.has(s.label))
+      : []),
+  ];
 
   const startedAt = Date.now();
   const sessionIdFinal = session.id;
@@ -187,6 +210,9 @@ export async function POST(req: Request) {
         topK: SEARCH_TOP_K,
         ...(persona && { persona, personaName }),
         mcpServers,
+        ...(marketplaceAttachments.indexes.length > 0 && {
+          marketplaceIndexes: marketplaceAttachments.indexes,
+        }),
         emit,
         signal: req.signal,
       });

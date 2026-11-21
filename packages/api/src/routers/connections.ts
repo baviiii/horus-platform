@@ -1,6 +1,8 @@
 import { z } from 'zod';
 import { TRPCError } from '@trpc/server';
 import { checkMcpHealth, listMcpTools, type McpServerRef } from '@horus/core/mcp';
+import { blockedUrlReason } from '@horus/core/knowledge';
+import { isAllowedTenantSecretRef } from '@horus/core/marketplace';
 import { router, scopedProcedure } from '../trpc.js';
 
 /**
@@ -21,6 +23,28 @@ function toServerRef(conn: {
   authType: string;
   secretRef: string | null;
 }): McpServerRef {
+  const blocked = blockedUrlReason(conn.endpoint);
+  if (blocked) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: `MCP endpoint is not allowed (${blocked}).`,
+    });
+  }
+  if (
+    process.env.NODE_ENV === 'production' &&
+    !conn.endpoint.toLowerCase().startsWith('https://')
+  ) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'MCP endpoints must use HTTPS in production.',
+    });
+  }
+  if (conn.secretRef && !isAllowedTenantSecretRef(conn.secretRef)) {
+    throw new TRPCError({
+      code: 'BAD_REQUEST',
+      message: 'MCP secret references must begin with MCP_SECRET_.',
+    });
+  }
   const headers: Record<string, string> = {};
   if (conn.authType === 'bearer' && conn.secretRef) {
     const secret = process.env[conn.secretRef];
@@ -61,7 +85,10 @@ export const connectionsRouter = router({
         name: z.string().min(1).max(80),
         endpoint: z.string().url().max(1024),
         authType: z.enum(['none', 'bearer']).default('none'),
-        secretRef: z.string().max(128).optional(),
+        secretRef: z
+          .string()
+          .regex(/^MCP_SECRET_[A-Z0-9_]{1,96}$/, 'secretRef must begin with MCP_SECRET_')
+          .optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {

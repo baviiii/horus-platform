@@ -203,6 +203,89 @@ export default function HomePage() {
       </Section>
 
       {/* ───────────────────────────────────────────────────────────
+         Marketplace & MCP Hub — advertise live indexes + MCP gateway
+         ─────────────────────────────────────────────────────────── */}
+      <div className="dark">
+        <Aurora intensity={1.15}>
+          <Section invert id="marketplace" className="overflow-hidden">
+            <div className="bg-grid pointer-events-none absolute inset-0 opacity-45" />
+            <Container size="wide" className="relative">
+              <div className="flex flex-wrap items-end justify-between gap-6">
+                <Reveal className="max-w-2xl">
+                  <Eyebrow>Marketplace &amp; MCP Hub</Eyebrow>
+                  <h2 className="mt-5 text-balance text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl">
+                    <span className="text-paper">Plug into curated indexes and MCPs —</span>{' '}
+                    <span className="serif-italic text-paper/70 font-normal">from any stack.</span>
+                  </h2>
+                  <p className="text-paper/65 mt-5 text-lg leading-relaxed">
+                    Access Horus’s verified knowledge indexes, entity graphs, and stateless MCP tool
+                    servers inside your workspace, or bring them straight into Cursor, Claude
+                    Desktop, Windsurf, and external platforms with one scoped API key.
+                  </p>
+                </Reveal>
+
+                <Reveal delay={180} className="flex flex-wrap items-center gap-3">
+                  <Magnetic strength={8}>
+                    <Link
+                      href="/marketplace"
+                      className="bg-accent shadow-blue hover:shadow-blue-lg group inline-flex h-11 items-center gap-1.5 rounded-full px-6 text-[14px] font-medium text-white transition-shadow"
+                    >
+                      Explore Marketplace
+                      <Arrow />
+                    </Link>
+                  </Magnetic>
+                  <Link
+                    href="/marketplace/workspace"
+                    className="border-paper/20 text-paper hover:border-paper/45 inline-flex h-11 items-center rounded-full border px-5 text-[14px] font-medium transition-colors"
+                  >
+                    Connect your own index
+                  </Link>
+                </Reveal>
+              </div>
+
+              <div className="mt-12 grid gap-5 lg:grid-cols-3">
+                {marketplaceHighlights.map((item, i) => (
+                  <Reveal key={item.slug} delay={120 + i * 90}>
+                    <Link
+                      href={`/marketplace/${item.slug}`}
+                      className="border-paper/10 bg-paper/5 hover:border-accent/50 hover:bg-paper/10 group relative flex h-full flex-col justify-between overflow-hidden rounded-3xl border p-7 backdrop-blur-sm transition-all duration-500 hover:-translate-y-1"
+                    >
+                      <div className="via-accent/60 absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent to-transparent opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
+                      <div>
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-technical text-accent-glow rounded-full border border-white/15 bg-white/5 px-2.5 py-1 text-[10.5px] uppercase tracking-wider">
+                            {item.badge}
+                          </span>
+                          <span className="font-technical text-paper/45 text-[11px]">
+                            {item.protocol}
+                          </span>
+                        </div>
+                        <h3 className="text-paper group-hover:text-accent-glow mt-5 text-xl font-semibold tracking-tight transition-colors">
+                          {item.title}
+                        </h3>
+                        <p className="text-paper/60 mt-2.5 text-[14.5px] leading-relaxed">
+                          {item.body}
+                        </p>
+                      </div>
+
+                      <div className="border-paper/10 mt-6 flex items-center justify-between border-t pt-4 text-[12.5px]">
+                        <code className="font-technical text-paper/70 text-[11.5px]">
+                          /api/mcp/{item.slug}
+                        </code>
+                        <span className="text-accent-glow inline-flex items-center gap-1 font-medium">
+                          Connect <Arrow />
+                        </span>
+                      </div>
+                    </Link>
+                  </Reveal>
+                ))}
+              </div>
+            </Container>
+          </Section>
+        </Aurora>
+      </div>
+
+      {/* ───────────────────────────────────────────────────────────
          How it works — three connected steps
          ─────────────────────────────────────────────────────────── */}
       <Section className="bg-paper-soft">
@@ -631,6 +714,30 @@ const steps = [
     title: 'Ship the feature',
     body: 'Drop the response into your UI. Citations and graph context come included — no plumbing.',
     code: 'git push origin main',
+  },
+];
+
+const marketplaceHighlights = [
+  {
+    slug: 'careercraft-index',
+    badge: 'Knowledge Index + Graph',
+    protocol: 'MCP · REST · SDK',
+    title: 'Australian Policy, Budget & Workforce Index',
+    body: 'Cited hybrid retrieval and entity-relationship graph across federal & state budgets, TAFE, skills, and workforce policy.',
+  },
+  {
+    slug: 'interview-coach',
+    badge: 'MCP Tool Server',
+    protocol: 'Streamable HTTP',
+    title: 'Interview Coach & Role Research MCP',
+    body: 'Live role intelligence, structured study guides, interview question loops, and rubric scoring behind one Horus API key.',
+  },
+  {
+    slug: 'workspace',
+    badge: 'Workspace Bridge',
+    protocol: 'Per-tenant RLS',
+    title: 'Your Own Horus Index Everywhere',
+    body: 'Expose your workspace documents, collections, and knowledge graph directly to Cursor, Claude Desktop, or external backends.',
   },
 ];
 

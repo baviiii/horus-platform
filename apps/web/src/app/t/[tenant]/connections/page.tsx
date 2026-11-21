@@ -3,6 +3,8 @@ import { PageHeader, Panel, Pill, StatCard } from '@/components/app/shell';
 import { Reveal } from '@/components/motion';
 import { Button } from '@/components/ui/button';
 import { checkMcpHealth, listMcpTools, type McpServerRef } from '@horus/core/mcp';
+import { blockedUrlReason } from '@horus/core/knowledge';
+import { isAllowedTenantSecretRef } from '@horus/core/marketplace';
 import { PLAYGROUND } from '@/app/api/playground/_lib/config';
 import { isPlatformAdmin, requireTenantMember } from '@/lib/tenant-context';
 import { addConnectionAction, removeConnectionAction, testConnectionsAction } from './actions';
@@ -105,6 +107,7 @@ async function toolServers(tenantId: string, includeDemo: boolean): Promise<Tool
     name: string;
     source: ToolServer['source'];
     id?: string;
+    safetyError?: string;
   }> = (includeDemo ? PLAYGROUND.mcpServers : []).map((ref) => ({
     ref,
     name: ref.label.replace(/_/g, ' '),
@@ -117,8 +120,21 @@ async function toolServers(tenantId: string, includeDemo: boolean): Promise<Tool
     orderBy: { createdAt: 'asc' },
   });
   for (const row of rows) {
+    const blocked = blockedUrlReason(row.endpoint);
+    const secretRefBlocked = Boolean(row.secretRef && !isAllowedTenantSecretRef(row.secretRef));
+    const insecureTransport =
+      process.env.NODE_ENV === 'production' && !row.endpoint.toLowerCase().startsWith('https://');
+    const safetyError = blocked
+      ? `MCP endpoint is not allowed (${blocked}).`
+      : secretRefBlocked
+        ? 'MCP secret references must begin with MCP_SECRET_.'
+        : insecureTransport
+          ? 'MCP endpoints must use HTTPS in production.'
+          : undefined;
     const secret =
-      row.authType === 'bearer' && row.secretRef ? process.env[row.secretRef] : undefined;
+      !safetyError && row.authType === 'bearer' && row.secretRef
+        ? process.env[row.secretRef]
+        : undefined;
     servers.push({
       ref: {
         label: row.slug,
@@ -128,11 +144,25 @@ async function toolServers(tenantId: string, includeDemo: boolean): Promise<Tool
       name: row.name,
       source: 'workspace',
       id: row.id,
+      ...(safetyError && { safetyError }),
     });
   }
 
   return Promise.all(
-    servers.map(async ({ ref, name, source, id }) => {
+    servers.map(async ({ ref, name, source, id, safetyError }) => {
+      if (safetyError) {
+        return {
+          name,
+          slug: ref.label,
+          endpoint: ref.url,
+          source,
+          id,
+          ok: false,
+          toolCount: 0,
+          tools: [],
+          error: safetyError,
+        };
+      }
       const health = await probe(ref);
       return { name, slug: ref.label, endpoint: ref.url, source, id, ...health };
     }),
@@ -216,7 +246,7 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ te
 
         <Panel
           title="Tool servers · MCP"
-          description="External capabilities your agents can use. Horus is the MCP client, so servers on private networks work too."
+          description="External capabilities your agents can use. For tenant safety, endpoints must be public HTTPS services and secret references must use MCP_SECRET_*."
         >
           {canManage && (
             <details className="border-hairline mb-5 rounded-xl border">
@@ -248,7 +278,9 @@ export default async function ConnectionsPage({ params }: { params: Promise<{ te
                 />
                 <input
                   name="secretRef"
-                  placeholder="Env var holding a bearer secret (optional)"
+                  placeholder="MCP_SECRET_PARTNER_API (optional)"
+                  pattern="MCP_SECRET_[A-Z0-9_]{1,96}"
+                  title="Secret references must start with MCP_SECRET_ and contain uppercase letters, digits, or underscores."
                   className="focus-ring border-hairline-strong bg-paper placeholder:text-ink-mute/70 mono h-9 rounded-lg border px-3 text-[12.5px] outline-none"
                 />
                 <div className="flex items-center justify-end">
